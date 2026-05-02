@@ -20,7 +20,7 @@ from pyspark.sql import functions as F
 
 
 def stratified_split(
-    df: DataFrame, label_col: str = "problem", test_fraction: float = 0.2
+    df: DataFrame, label_col: str = "label_canonical", test_fraction: float = 0.2
 ) -> Tuple[DataFrame, DataFrame]:
     """
     train/test split that preserves class proportions. uses sampleBy because
@@ -40,17 +40,31 @@ def stratified_split(
     return train, test
 
 
-def build_pipeline(num_features: int = 65536) -> Pipeline:
+def build_pipeline(
+    label_col: str = "label_canonical",
+    num_features: int = 16384,
+    min_doc_freq: int = 10,
+    reg_param: float = 0.01,
+) -> Pipeline:
     """
-    standard tf-idf + logistic regression pipeline. random forest swap is
-    one line in the notebook so we dont overload this builder.
+    standard tf-idf + logistic regression pipeline.
+
+    Args:
+        label_col: column to predict. defaults to label_canonical (post-phase2)
+                   so the pipeline doesnt confuse raw and cleaned labels.
+        num_features: hash space size. 16k is plenty for 311 descriptors
+                      where mean token count is ~2.25 - bigger just wastes
+                      memory and bloats the portable export.
+        min_doc_freq: drop any term that appears in fewer than this many
+                      docs at idf time. filters typos and one-off junk.
+        reg_param: l2 regularization strength.
     """
-    indexer = StringIndexer(inputCol="problem", outputCol="label", handleInvalid="skip")
+    indexer = StringIndexer(inputCol=label_col, outputCol="label", handleInvalid="skip")
     hashing_tf = HashingTF(inputCol="tokens", outputCol="raw_features", numFeatures=num_features)
-    idf = IDF(inputCol="raw_features", outputCol="features", minDocFreq=5)
+    idf = IDF(inputCol="raw_features", outputCol="features", minDocFreq=min_doc_freq)
     lr = LogisticRegression(
         maxIter=20,
-        regParam=0.01,
+        regParam=reg_param,
         elasticNetParam=0.0,
         family="multinomial",
     )

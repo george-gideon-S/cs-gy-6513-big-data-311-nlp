@@ -285,19 +285,23 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Phase 0 PASSED on Colab Pro High-RAM. Spark 3.5.8, Java 11, SODA API reachable, normalized schema produces 13 expected columns on 10K sample rows. Pip warning about dataproc-spark-connect/pyspark version mismatch is benign and ignored.
 - **2026-05-02** — Phase 1 PASSED. 2M stratified sample on Drive. Discovered label-casing inconsistency: historical labels are ALL-CAPS, 2020+ are Title Case. Same categories, different names. Will collapse via a labels map in Phase 2 preprocessing.
 - **2026-05-02** — Phase 2 hit `ModuleNotFoundError: No module named 'src'` on Spark workers (UDF unpickle failure because workers lack project root in sys.path). Fixed by adding addPyFile + executor PYTHONPATH config to `get_spark()`. Worker subprocesses now have `src` importable.
+- **2026-05-02** — Phase 2 then hit `LookupError: Resource wordnet not found` on workers (NLTK_DATA_DIR was project-relative, resolved inside the addPyFile zip on workers). Fixed by extending `_NLTK_PATHS` in `src/preprocess.py` to include `/root/nltk_data` and `/usr/share/nltk_data` which are nltk's default search paths.
+- **2026-05-02** — Phase 2 PASSED. 1.94M usable rows after empty-token filter. Distinct canonical labels dropped from 244 to 240 via label map. Top tokens domain-specific (loud, music, party, pothole, banging). Note: mean tokens per row = 2.25 (descriptors are short categorical labels rather than free text), so Phase 3 will use 16K HashingTF features instead of 65K.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 1 PASSED (2026-05-02). 2M stratified sample on Drive at `/content/drive/MyDrive/cs6513/sample_2m.parquet`. Top categories: Noise-Residential 193K, HEATING 100K, Bulky Item 98K, Street Condition 91K, Street Light 87K. Phase 2 ready.
+**Current phase:** Phase 2 PASSED (2026-05-02). Preprocessed parquet on Drive at `/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet`. Label canonicalization merged HEATING+HEAT/HOT WATER (182K total) and General Construction variants (100K). 3.2% empty token rows. Mean tokens per row: 2.25. Top tokens are domain-specific.
 **Last touched:** 2026-05-02
-**Next action:** user opens `notebooks/02_preprocess.ipynb` in Colab and runs all cells. Phase 2 includes label normalization (collapse ALL-CAPS historical labels into Title-Case 2020+ labels) plus NLTK tokenize/stop/lemma. Expected wall time: 5-10 min.
+**Next action:** user opens `notebooks/03_classify.ipynb` in Colab and runs all cells. Phase 3 trains TF-IDF + Logistic Regression + Random Forest on top-20 categories, target macro-F1 >= 0.75. Expected wall time: 8-15 min.
 **Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
 **PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
-**Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1) — saved locally, gitignored.
+**Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1), `PRINT 3.pdf` (Phase 2) — saved locally, gitignored.
 
-**Known issue carried into Phase 2:** historical 2010-19 labels are ALL-CAPS (HEATING, PLUMBING, PAINT - PLASTER, GENERAL CONSTRUCTION) while 2020+ uses Title Case (Heat/Hot Water, Plumbing, Paint/Plaster, General Construction). Same complaint types, different naming. Phase 2 preprocessing collapses them.
+**Phase 2 lessons baked into the codebase:**
+- `src/spark_setup.py::get_spark` now zips `src/` and calls `addPyFile` so worker subprocesses can import `src.*` (UDF unpickle was failing without this).
+- `src/preprocess.py::_NLTK_PATHS` searches `/root/nltk_data` and `/usr/share/nltk_data` by default so workers find NLTK data via the standard search path.
 
 ---
 
