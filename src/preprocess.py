@@ -108,20 +108,34 @@ _PROJECT_STOPS: set = {
 }
 
 
+# where to look for nltk data. order matters: project-bundled first, then
+# system path that spark workers find via their default search.
+#
+# the second path is the important one for spark - workers receive src/ via
+# addPyFile but cant see dashboard/assets/, so they need a system-wide
+# nltk path they can fall back on. /root/nltk_data is one of nltks default
+# search paths so this works without per-worker config.
+_NLTK_PATHS = [str(NLTK_DATA_DIR), "/root/nltk_data", "/usr/share/nltk_data"]
+
+
 def _ensure_nltk_data() -> None:
     """make sure stopwords + wordnet + punkt are on disk before we use them."""
-    nltk.data.path.insert(0, str(NLTK_DATA_DIR))
+    for p in _NLTK_PATHS:
+        if p not in nltk.data.path:
+            nltk.data.path.insert(0, p)
+
     for pkg in ["stopwords", "wordnet", "punkt", "punkt_tab", "omw-1.4"]:
         try:
-            nltk.data.find(pkg)
+            nltk.data.find(pkg if "/" in pkg else f"corpora/{pkg}")
         except LookupError:
-            # this will hit the network if NLTK_DATA_DIR is empty.
-            # in production we ship them bundled so this is a no-op.
-            try:
-                nltk.download(pkg, download_dir=str(NLTK_DATA_DIR), quiet=True)
-            except Exception as e:
-                # if we cant download, the bundled assets must already cover it
-                print(f"  nltk download skipped for {pkg}: {e}")
+            # download to /root/nltk_data which workers will find too.
+            # falling back to the project assets dir if /root isnt writable.
+            for target in ["/root/nltk_data", str(NLTK_DATA_DIR)]:
+                try:
+                    nltk.download(pkg, download_dir=target, quiet=True)
+                    break
+                except Exception:
+                    continue
 
 
 def _english_stops() -> set:
