@@ -287,21 +287,27 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Phase 2 hit `ModuleNotFoundError: No module named 'src'` on Spark workers (UDF unpickle failure because workers lack project root in sys.path). Fixed by adding addPyFile + executor PYTHONPATH config to `get_spark()`. Worker subprocesses now have `src` importable.
 - **2026-05-02** — Phase 2 then hit `LookupError: Resource wordnet not found` on workers (NLTK_DATA_DIR was project-relative, resolved inside the addPyFile zip on workers). Fixed by extending `_NLTK_PATHS` in `src/preprocess.py` to include `/root/nltk_data` and `/usr/share/nltk_data` which are nltk's default search paths.
 - **2026-05-02** — Phase 2 PASSED. 1.94M usable rows after empty-token filter. Distinct canonical labels dropped from 244 to 240 via label map. Top tokens domain-specific (loud, music, party, pothole, banging). Note: mean tokens per row = 2.25 (descriptors are short categorical labels rather than free text), so Phase 3 will use 16K HashingTF features instead of 65K.
+- **2026-05-02** — Phase 3 PASSED. LR macro-F1 = 0.9593, accuracy = 0.9638. Lifts: +0.95 over majority-class, +0.18 over keyword-heuristic. Training time 40.8 sec on 1.08M rows. 19/20 classes hit F1 ≥ 0.88. Outlier: Noise - Street/Sidewalk F1 = 0.370 (label confusion with Noise - Residential, fixable with location_type as a feature in a future iteration). Portable .npz = 0.10 MB.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 2 PASSED (2026-05-02). Preprocessed parquet on Drive at `/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet`. Label canonicalization merged HEATING+HEAT/HOT WATER (182K total) and General Construction variants (100K). 3.2% empty token rows. Mean tokens per row: 2.25. Top tokens are domain-specific.
+**Current phase:** Phase 3 PASSED (2026-05-02). Classifier trained: LR macro-F1 = 0.9593 (target was 0.75, exceeded by 21 pts). Beats keyword baseline (0.78) by +0.18, beats majority-class (0.01) by +0.95. Portable artifact `models/portable/classifier.npz` is 0.10 MB on Colab disk (not yet pushed to repo).
 **Last touched:** 2026-05-02
-**Next action:** user opens `notebooks/03_classify.ipynb` in Colab and runs all cells. Phase 3 trains TF-IDF + Logistic Regression + Random Forest on top-20 categories, target macro-F1 >= 0.75. Expected wall time: 8-15 min.
+**Next action:** user opens `notebooks/04_regress.ipynb` in Colab and runs all cells. Phase 4 trains a resolution-time regressor on the same 2M sample with TF-IDF + agency + borough + temporal features, target MAE >= 10% better than median-per-category baseline. Expected wall time: 5-10 min.
 **Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
 **PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
-**Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1), `PRINT 3.pdf` (Phase 2) — saved locally, gitignored.
+**Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1), `PRINT 3.pdf` (Phase 2), `PRINT 4.pdf` (Phase 3) — saved locally, gitignored.
 
-**Phase 2 lessons baked into the codebase:**
-- `src/spark_setup.py::get_spark` now zips `src/` and calls `addPyFile` so worker subprocesses can import `src.*` (UDF unpickle was failing without this).
+**Phase 2-3 lessons baked into the codebase:**
+- `src/spark_setup.py::get_spark` zips `src/` and calls `addPyFile` so worker subprocesses can import `src.*` (UDF unpickle was failing without this).
 - `src/preprocess.py::_NLTK_PATHS` searches `/root/nltk_data` and `/usr/share/nltk_data` by default so workers find NLTK data via the standard search path.
+- `src/classify.py::build_pipeline` defaults to `label_canonical` (post-Phase-2) and 16K hash space (down from 65K — descriptors are short).
+
+**Demo-relevant findings to surface in the report:**
+- The keyword-heuristic baseline already hits 0.78 macro-F1, indicating that `problem_detail` is mostly a dictionary lookup (drop-down terms). LR adds discriminative weighting on top to reach 0.96. Frame the achievement honestly in the Q&A.
+- Noise - Street/Sidewalk has F1 0.370, getting collapsed into Noise - Residential. Real reporting bias documented by Kontokosta & Hong (2021) — the Bias Audit tab will surface this as a finding.
 
 ---
 
