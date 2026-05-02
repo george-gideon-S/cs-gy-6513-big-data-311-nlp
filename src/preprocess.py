@@ -24,6 +24,80 @@ from pyspark.sql.types import ArrayType, StringType
 from src.config import NLTK_DATA_DIR
 
 
+# label canonicalization map. the historical 2010-19 dataset uses ALL-CAPS
+# category names while 2020+ uses Title Case. some categories were also
+# renamed in the 2018-19 taxonomy refresh.
+#
+# left side = name as it appears in raw data (lowercased for case-insensitive
+# matching). right side = canonical name we use for training.
+#
+# tuned from inspecting our top-20 distribution. extend as new mismatches
+# are discovered.
+LABEL_CANONICAL_MAP: dict = {
+    # heat related
+    "heating": "Heat/Hot Water",
+    "heat/hot water": "Heat/Hot Water",
+    "hot water": "Heat/Hot Water",
+    # plumbing
+    "plumbing": "Plumbing",
+    # painting
+    "paint - plaster": "Paint/Plaster",
+    "paint/plaster": "Paint/Plaster",
+    # construction
+    "general construction": "General Construction",
+    "general construction/plumbing": "General Construction",
+    # noise variants - the 2020+ data already splits these well, just unify casing
+    "noise - residential": "Noise - Residential",
+    "noise - street/sidewalk": "Noise - Street/Sidewalk",
+    "noise - commercial": "Noise - Commercial",
+    "noise - vehicle": "Noise - Vehicle",
+    "noise - park": "Noise - Park",
+    # street stuff
+    "street condition": "Street Condition",
+    "street light condition": "Street Light Condition",
+    "street sign - missing": "Street Sign - Missing",
+    "street sign - damaged": "Street Sign - Damaged",
+    # parking
+    "illegal parking": "Illegal Parking",
+    "blocked driveway": "Blocked Driveway",
+    # sanitation
+    "request large bulky item collection": "Bulky Item Collection",
+    "bulky item collection": "Bulky Item Collection",
+    "dirty conditions": "Dirty Conditions",
+    "missed collection (all materials)": "Missed Collection",
+    "missed collection": "Missed Collection",
+    # housing
+    "unsanitary condition": "Unsanitary Condition",
+    "rodent": "Rodent",
+    # police
+    "non-emergency police matter": "Non-Emergency Police Matter",
+    # water
+    "water system": "Water System",
+}
+
+
+def canonicalize_label(raw: str) -> str:
+    """
+    map a raw 311 problem string to its canonical form.
+    falls through to the original string if no mapping exists,
+    so unknown categories arent silently dropped.
+    """
+    if raw is None:
+        return None
+    key = raw.strip().lower()
+    return LABEL_CANONICAL_MAP.get(key, raw.strip())
+
+
+def add_canonical_label(df: DataFrame, in_col: str = "problem", out_col: str = "label_canonical") -> DataFrame:
+    """spark wrapper around canonicalize_label, adds an extra column."""
+
+    @F.udf(returnType=StringType())
+    def _udf(s):
+        return canonicalize_label(s)
+
+    return df.withColumn(out_col, _udf(F.col(in_col)))
+
+
 # project stopwords - words so common in 311 they kill discrimination.
 # tuned by inspecting top tf-idf terms across all categories.
 _PROJECT_STOPS: set = {

@@ -282,17 +282,20 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Novelty additions confirmed: Triage Bot centerpiece, BERT embedding sidebar, Bias Audit tab, optional Live Pulse from SODA API.
 - **2026-05-02** — Repo created at https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp; initial scaffold pushed (34 files). PAT auth working for Claude-driven git push.
 - **2026-05-02** — Phase 0 PASSED on Colab Pro High-RAM. Spark 3.5.8, Java 11, SODA API reachable, normalized schema produces 13 expected columns on 10K sample rows. Pip warning about dataproc-spark-connect/pyspark version mismatch is benign and ignored.
+- **2026-05-02** — Phase 1 PASSED. 2M stratified sample on Drive. Discovered label-casing inconsistency: historical labels are ALL-CAPS, 2020+ are Title Case. Same categories, different names. Will collapse via a labels map in Phase 2 preprocessing.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 0 PASSED (2026-05-02). Spark 3.5.8 booting on Colab High-RAM, SODA API verified, schema clean. Phase 1 ready to run.
+**Current phase:** Phase 1 PASSED (2026-05-02). 2M stratified sample on Drive at `/content/drive/MyDrive/cs6513/sample_2m.parquet`. Top categories: Noise-Residential 193K, HEATING 100K, Bulky Item 98K, Street Condition 91K, Street Light 87K. Phase 2 ready.
 **Last touched:** 2026-05-02
-**Next action:** user opens `notebooks/01_ingest.ipynb` in Colab and runs all cells. Expected wall time: 25-40 min for the 2M stratified sample.
+**Next action:** user opens `notebooks/02_preprocess.ipynb` in Colab and runs all cells. Phase 2 includes label normalization (collapse ALL-CAPS historical labels into Title-Case 2020+ labels) plus NLTK tokenize/stop/lemma. Expected wall time: 5-10 min.
 **Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
 **PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
-**Phase 0 evidence:** `PRINT.pdf` saved locally (gitignored).
+**Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1) — saved locally, gitignored.
+
+**Known issue carried into Phase 2:** historical 2010-19 labels are ALL-CAPS (HEATING, PLUMBING, PAINT - PLASTER, GENERAL CONSTRUCTION) while 2020+ uses Title Case (Heat/Hot Water, Plumbing, Paint/Plaster, General Construction). Same complaint types, different naming. Phase 2 preprocessing collapses them.
 
 ---
 
