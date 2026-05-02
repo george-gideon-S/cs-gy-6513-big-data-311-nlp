@@ -280,14 +280,17 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — UI pivoted from Plotly Dash to Streamlit. Reason: faster solo-build velocity; better fit for live ML widgets; deploys to Streamlit Community Cloud for free shareable URL.
 - **2026-05-02** — Sample size locked at 2M rows stratified, not full 43M. Reason: training iteration speed; still 2x above professor's 1M floor.
 - **2026-05-02** — Novelty additions confirmed: Triage Bot centerpiece, BERT embedding sidebar, Bias Audit tab, optional Live Pulse from SODA API.
+- **2026-05-02** — Repo created at https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp; initial scaffold pushed (34 files). PAT auth working for Claude-driven git push.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 0 — environment scaffolding complete; Colab notebook ready to run.
+**Current phase:** Phase 0 — scaffold pushed to GitHub. Awaiting first Colab run.
 **Last touched:** 2026-05-02
-**Next action:** user to open `notebooks/00_env_check.ipynb` in Colab and run cells. See `docs/STEP_BY_STEP_GUIDE.md` Phase 0.
+**Next action:** user opens `notebooks/00_env_check.ipynb` in Colab via the GitHub tab, runs all 6 cells, sends Claude a screenshot (or pastes output) of Cell 5 and Cell 6.
+**Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
+**PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
 
 ---
 
