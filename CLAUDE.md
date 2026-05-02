@@ -281,16 +281,18 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Sample size locked at 2M rows stratified, not full 43M. Reason: training iteration speed; still 2x above professor's 1M floor.
 - **2026-05-02** — Novelty additions confirmed: Triage Bot centerpiece, BERT embedding sidebar, Bias Audit tab, optional Live Pulse from SODA API.
 - **2026-05-02** — Repo created at https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp; initial scaffold pushed (34 files). PAT auth working for Claude-driven git push.
+- **2026-05-02** — Phase 0 PASSED on Colab Pro High-RAM. Spark 3.5.8, Java 11, SODA API reachable, normalized schema produces 13 expected columns on 10K sample rows. Pip warning about dataproc-spark-connect/pyspark version mismatch is benign and ignored.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 0 — scaffold pushed to GitHub. Awaiting first Colab run.
+**Current phase:** Phase 0 PASSED (2026-05-02). Spark 3.5.8 booting on Colab High-RAM, SODA API verified, schema clean. Phase 1 ready to run.
 **Last touched:** 2026-05-02
-**Next action:** user opens `notebooks/00_env_check.ipynb` in Colab via the GitHub tab, runs all 6 cells, sends Claude a screenshot (or pastes output) of Cell 5 and Cell 6.
+**Next action:** user opens `notebooks/01_ingest.ipynb` in Colab and runs all cells. Expected wall time: 25-40 min for the 2M stratified sample.
 **Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
 **PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
+**Phase 0 evidence:** `PRINT.pdf` saved locally (gitignored).
 
 ---
 

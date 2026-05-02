@@ -46,3 +46,7 @@ secrets/
 # colab / runtime junk
 sample_data/
 .ngrok/
+
+# phase evidence pdfs (kept locally, not in repo)
+PRINT.pdf
+PRINT_*.pdf
