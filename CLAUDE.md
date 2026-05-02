@@ -238,6 +238,7 @@ Notebook naming: `NN_phase-name.ipynb`, zero-padded.
 
 | Gotcha | How to dodge |
 |---|---|
+| `ModuleNotFoundError: No module named 'src'` inside Spark Python worker when a UDF references our modules | `src/spark_setup.py::get_spark` zips `src/` and calls `sparkContext.addPyFile`. Driver `sys.path.insert` does NOT propagate to worker subprocesses. Discovered Phase 2. |
 | Streamlit Cloud has no Java -> can't run PySpark in deployed app | Export models to portable artifacts (numpy / gensim / parquet) at end of each phase |
 | Streamlit Cloud 1GB limit | Sub-sample BERT embeddings to ~50K vectors or move to HF Spaces |
 | Local Windows + Java 17 PySpark loopback bug | Train on Colab; this avoids the issue entirely |
@@ -283,6 +284,7 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Repo created at https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp; initial scaffold pushed (34 files). PAT auth working for Claude-driven git push.
 - **2026-05-02** — Phase 0 PASSED on Colab Pro High-RAM. Spark 3.5.8, Java 11, SODA API reachable, normalized schema produces 13 expected columns on 10K sample rows. Pip warning about dataproc-spark-connect/pyspark version mismatch is benign and ignored.
 - **2026-05-02** — Phase 1 PASSED. 2M stratified sample on Drive. Discovered label-casing inconsistency: historical labels are ALL-CAPS, 2020+ are Title Case. Same categories, different names. Will collapse via a labels map in Phase 2 preprocessing.
+- **2026-05-02** — Phase 2 hit `ModuleNotFoundError: No module named 'src'` on Spark workers (UDF unpickle failure because workers lack project root in sys.path). Fixed by adding addPyFile + executor PYTHONPATH config to `get_spark()`. Worker subprocesses now have `src` importable.
 
 ---
 
