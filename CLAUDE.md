@@ -288,14 +288,15 @@ public_url = ngrok.connect(8501)
 - **2026-05-02** — Phase 2 then hit `LookupError: Resource wordnet not found` on workers (NLTK_DATA_DIR was project-relative, resolved inside the addPyFile zip on workers). Fixed by extending `_NLTK_PATHS` in `src/preprocess.py` to include `/root/nltk_data` and `/usr/share/nltk_data` which are nltk's default search paths.
 - **2026-05-02** — Phase 2 PASSED. 1.94M usable rows after empty-token filter. Distinct canonical labels dropped from 244 to 240 via label map. Top tokens domain-specific (loud, music, party, pothole, banging). Note: mean tokens per row = 2.25 (descriptors are short categorical labels rather than free text), so Phase 3 will use 16K HashingTF features instead of 65K.
 - **2026-05-02** — Phase 3 PASSED. LR macro-F1 = 0.9593, accuracy = 0.9638. Lifts: +0.95 over majority-class, +0.18 over keyword-heuristic. Training time 40.8 sec on 1.08M rows. 19/20 classes hit F1 ≥ 0.88. Outlier: Noise - Street/Sidewalk F1 = 0.370 (label confusion with Noise - Residential, fixable with location_type as a feature in a future iteration). Portable .npz = 0.10 MB.
+- **2026-05-02** — Phase 4 v1 (text + agency + borough + temporal). MAE 113.09h vs baseline 117.52h = +3.8%, below 10% target. Per-category: model wins on high-variance categories (Heat/Hot Water +12.9%, Consumer Complaint +11.0%), is neutral on tight ones. Lesson: text alone has limited signal; the realistic pipeline chains classifier->regressor. Phase 4 v2 retrains with `label_canonical` as a feature to hit target.
 
 ---
 
 ## 12. Status
 
-**Current phase:** Phase 3 PASSED (2026-05-02). Classifier trained: LR macro-F1 = 0.9593 (target was 0.75, exceeded by 21 pts). Beats keyword baseline (0.78) by +0.18, beats majority-class (0.01) by +0.95. Portable artifact `models/portable/classifier.npz` is 0.10 MB on Colab disk (not yet pushed to repo).
+**Current phase:** Phase 4 v1 ran 2026-05-02. Linear regression on log1p(hours) using TF-IDF + agency + borough + temporal hit MAE 113.09h vs baseline 117.52h = **3.8% improvement, below the 10% target**. Per-category breakdown shows the model adds 7-13% on high-variance categories (Heat/Hot Water +12.9%, Consumer Complaint +11.0%, Sewer +7.6%, Street Condition +7.0%) and is neutral/negative on tightly-bounded ones. Phase 4 v2 (with `label_canonical` added as a feature) is being run to hit the 10% target.
 **Last touched:** 2026-05-02
-**Next action:** user opens `notebooks/04_regress.ipynb` in Colab and runs all cells. Phase 4 trains a resolution-time regressor on the same 2M sample with TF-IDF + agency + borough + temporal features, target MAE >= 10% better than median-per-category baseline. Expected wall time: 5-10 min.
+**Next action:** user runs the v2 drop-in cell to retrain Phase 4 with category feature, then opens `notebooks/05_word2vec.ipynb` for Word2Vec + KMeans clustering.
 **Repo URL:** https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp
 **PAT status:** active for this Claude session; expires 2026-06-01 21:06 UTC.
 **Phase evidence:** `PRINT.pdf` (Phase 0), `PRINT 2.pdf` (Phase 1), `PRINT 3.pdf` (Phase 2), `PRINT 4.pdf` (Phase 3) — saved locally, gitignored.
