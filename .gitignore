@@ -1,0 +1,48 @@
+# raw / large data
+data/
+delta/
+*.parquet
+*.csv
+!dashboard/assets/*.csv
+
+# checkpoints
+spark-warehouse/
+.checkpoint/
+*.crc
+_SUCCESS
+
+# trained models (the big spark pipelinemodels - keep portable exports though)
+models/*
+!models/portable/
+!models/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+
+# notebooks output checkpoints
+*-checkpoint.ipynb
+
+# ide
+.vscode/
+.idea/
+*.swp
+
+# os
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# secrets
+.env
+*.key
+secrets/
+
+# colab / runtime junk
+sample_data/
+.ngrok/

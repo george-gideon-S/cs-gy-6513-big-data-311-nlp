@@ -1,0 +1,17 @@
+# streamlit cloud picks this up automatically.
+# nyu-purple-ish theme to match the project header styling.
+
+[theme]
+primaryColor = "#57068C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2EFF7"
+textColor = "#262730"
+font = "sans serif"
+
+[server]
+# port 8501 is streamlit default but we pin it for ngrok consistency
+port = 8501
+headless = true
+
+[browser]
+gatherUsageStats = false
