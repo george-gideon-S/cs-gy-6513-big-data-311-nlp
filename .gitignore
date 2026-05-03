@@ -11,10 +11,38 @@ spark-warehouse/
 *.crc
 _SUCCESS
 
-# trained models (the big spark pipelinemodels - keep portable exports though)
-models/*
-!models/portable/
+# trained models - all generated artifacts stay out of the repo
+# (deployed Streamlit can fetch them from drive or commit-on-demand)
+models/
 !models/.gitkeep
+!models/portable/.gitkeep
+
+# generated dashboard artifacts (json + png from notebook runs)
+# nyc_boroughs.geojson is the only bundled INPUT so we explicitly keep it
+dashboard/assets/*.json
+dashboard/assets/*.npz
+dashboard/assets/*.png
+!dashboard/assets/.gitkeep
+
+# dev-only phase notebooks (superseded by FINAL_PROJECT_311_NLP.ipynb).
+# the unified notebook is the only one that matters.
+notebooks/00_*.ipynb
+notebooks/01_*.ipynb
+notebooks/02_*.ipynb
+notebooks/03_*.ipynb
+notebooks/04_*.ipynb
+notebooks/05_*.ipynb
+notebooks/06_*.ipynb
+notebooks/07_*.ipynb
+notebooks/08_*.ipynb
+notebooks/09_*.ipynb
+notebooks/10_*.ipynb
+
+# internal dev / private course material
+CLAUDE.md
+HADOOP_ASSIGNMENT_MASTER_PROMPT.md
+PROFESSOR DOCS/
+docs/SESSION_GUIDE.md
 
 # python
 __pycache__/

@@ -1,6 +1,0 @@
-{
-  "rows_total": 2000000,
-  "rows_empty_tokens": 63297,
-  "distinct_canonical_labels": 240,
-  "mean_tokens_per_row": 2.247779
-}
