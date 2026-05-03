@@ -15,6 +15,15 @@ shapely>=2.0
 pyarrow>=14
 scipy>=1.11
 
+# word2vec keyedvectors export (phase 5)
+# colab does not ship gensim by default and the bootstrap installer
+# needs an explicit pin or phase 5 hits ImportError on the kv save step.
+gensim>=4.3
+
+# nltk (phase 2 tokenize / lemmatize). colab usually has it preinstalled
+# but pinning here makes the env reproducible from a fresh runtime.
+nltk>=3.8
+
 # bert / phase 10
 sentence-transformers>=2.5
 torch>=2.1
