@@ -1,0 +1,80 @@
+% neurips_2026.sty - minimal local fallback
+%
+% the official neurips conference style file is not on CTAN; it ships
+% as part of the conference author kit (https://neurips.cc). this file
+% is a self-contained stand-in that produces a similar-looking PDF for
+% local builds and submission, without trying to replicate every detail
+% of the conference camera-ready format. when the official .sty is
+% available, drop it in this directory and it takes precedence.
+%
+% supported options (all no-ops here; actual track switching is a
+% conference-side concern that doesnt affect the PDFs body):
+%   default, main, position, eandd, creativeai, sglblindworkshop,
+%   dblblindworkshop, preprint, final, nonatbib, nonanonymous
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{neurips_2026}[2026/01/01 v1.0 minimal local fallback]
+
+% accept and ignore option args so existing \usepackage calls keep working
+\DeclareOption*{}
+\ProcessOptions\relax
+
+% --- page geometry roughly matching the conference (5.5in x 9in body) ---
+\RequirePackage[
+    letterpaper,
+    textwidth=5.5in,
+    textheight=9in,
+    top=1in,
+    headheight=14pt,
+    headsep=10pt,
+    footskip=24pt,
+]{geometry}
+
+% --- typography. Times for body ---
+\RequirePackage{times}
+\RequirePackage{microtype}
+
+% --- title block - bold centered with rules above and below ---
+\renewcommand{\maketitle}{%
+    \begin{center}%
+        {\rule{\textwidth}{4pt}}%
+        \par\vspace{2pt}%
+        {\LARGE\bfseries\@title\par}%
+        \vspace{4pt}%
+        {\rule{\textwidth}{1pt}}%
+        \vspace{12pt}%
+        {\@author\par}%
+        \vspace{6pt}%
+    \end{center}%
+}
+
+% --- abstract block - centered "Abstract" header in 12pt bold ---
+\renewenvironment{abstract}{%
+    \begin{center}%
+        {\large\bfseries Abstract}%
+    \end{center}%
+    \begin{quote}\noindent%
+}{%
+    \end{quote}%
+    \vspace{12pt}%
+}
+
+% --- ack environment for acknowledgments (per the template) ---
+\newenvironment{ack}{%
+    \section*{Acknowledgments and disclosure of funding}%
+}{%
+    \par%
+}
+
+% --- section headings: bold flush left ---
+\renewcommand{\section}{\@startsection{section}{1}{0pt}%
+    {-3.5ex plus -1ex minus -.2ex}%
+    {2.3ex plus .2ex}%
+    {\normalfont\large\bfseries}}
+
+% --- natbib for citations (the template uses \citet etc.) ---
+\AtEndOfPackage{%
+    \@ifpackageloaded{natbib}{}{\RequirePackage{natbib}}%
+}
+
+\endinput
