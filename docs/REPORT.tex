@@ -249,7 +249,7 @@ Per-class precision, recall, and F1 are reported in Table \ref{tab:perclass}. Mo
   % Placeholder: this figure is generated from notebook outputs and saved
   % to dashboard/assets/cm.png by the auto-commit cell in Phase 3. The
   % copy under figures/ is the report-rendered version exported as PDF.
-  \includegraphics[width=0.85\linewidth]{figures/confusion_matrix.pdf}
+  \includegraphics[width=0.85\linewidth]{../dashboard/assets/cm.png}
   \caption{Confusion matrix on the held-out 20 percent split for the top-20 classifier. Diagonal dominance is clear: most classes sit at well above 0.95 F1 and place essentially all of their mass on the diagonal cell. The single substantive off-diagonal block is the Noise - Street/Sidewalk row leaking into the Noise - Residential column. We read this leakage as a reporting-bias artifact in the spirit of Kontokosta and Hong (2021) rather than a model failure: the descriptor vocabulary for the two noise sub-categories is genuinely indistinguishable, and the call-taker's choice of one official label over the other is not recoverable from the descriptor alone.}
   \label{fig:cm}
 \end{figure}
@@ -278,7 +278,7 @@ Table \ref{tab:regressor} reports the regressor MAE compared to the median-per-c
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\linewidth]{figures/regressor_lift_by_category.pdf}
+  \includegraphics[width=0.85\linewidth]{../dashboard/assets/regressor_lift.png}
   \caption{Per-category MAE lift over the median-per-category baseline, comparing variant v1 (TF-IDF + agency + borough + time-of-day) and variant v2 (v1 plus the predicted canonical category as a one-hot feature). v2 reaches or exceeds the 10 percent target on the high-variance categories where descriptor text genuinely encodes resolution-time signal (Heat/Hot Water, Consumer Complaint, Sewer, General Construction) while staying neutral on SLA-bounded categories such as Bulky Item and Police Matter where city service-level agreements pin resolution times to an essentially constant window. The aggregate lift of 4.1 percent is therefore not a model-quality story; it is the expected result of averaging high-lift and zero-lift categories together.}
   \label{fig:regressor-lift}
 \end{figure}
@@ -306,7 +306,7 @@ Table \ref{tab:embed} reports K-Means silhouette on both embedding spaces across
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\linewidth]{figures/silhouette_w2v_vs_bert.pdf}
+  \includegraphics[width=0.85\linewidth]{../dashboard/assets/bert_vs_w2v.png}
   \caption{Silhouette score as a function of cluster count $k$ for both embedding spaces. The pretrained sentence-transformers MiniLM model lifts cluster cohesion from approximately 0.46 to approximately 0.69 silhouette at matched $k = 30$ with no domain training, an absolute gain of 0.23 and a relative gain of 51 percent. Word2Vec, trained from scratch on the 311 vocabulary, peaks earlier (around $k = 25$) and at a lower silhouette ceiling, reflecting both its lower dimensionality (100 vs 384) and the fact that it learns only token-level co-occurrence rather than sentence-level semantics.}
   \label{fig:silhouette}
 \end{figure}
@@ -338,7 +338,7 @@ Per-borough complaint volume is itself the first slice worth examining. Brooklyn
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\linewidth]{figures/borough_volume.pdf}
+  \includegraphics[width=0.85\linewidth]{../dashboard/assets/borough_volume.png}
   \caption{Per-borough 311 complaint volume on the 10M sample. Brooklyn and Queens dominate; Staten Island contributes the smallest share. Despite contributing the least volume, Staten Island carries the strongest distinctive-vocabulary signal in the lift analysis (Table \ref{tab:borough-fingerprints}), suggesting that borough-level "fingerprint" strength is decoupled from raw call volume.}
   \label{fig:borough-volume}
 \end{figure}
