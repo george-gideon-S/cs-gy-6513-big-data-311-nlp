@@ -60,6 +60,60 @@ def _detect_project_root() -> Path:
     return candidate  # last resort
 
 
+def _kill_stale_session() -> None:
+    """
+    if a previous spark session crashed (jvm died, py4j socket dropped),
+    SparkSession.getOrCreate() will try to reuse the dead handle and fail
+    with `ConnectionRefusedError: [Errno 111] Connection refused`.
+
+    we defend against this by explicitly clearing the singleton handles
+    before creating a new session. swallow exceptions because the dead
+    session will throw on .stop() too - we just need the references gone.
+    """
+    try:
+        existing = SparkSession._instantiatedSession  # type: ignore[attr-defined]
+    except Exception:
+        existing = None
+    if existing is not None:
+        try:
+            existing.stop()
+            print("stopped stale spark session before creating new one")
+        except Exception:
+            pass
+        try:
+            SparkSession._instantiatedSession = None  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    # also clear the SparkContext singleton if it lingers
+    try:
+        from pyspark import SparkContext
+        if SparkContext._active_spark_context is not None:  # type: ignore[attr-defined]
+            try:
+                SparkContext._active_spark_context.stop()  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            SparkContext._active_spark_context = None  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
+def _verify_java(java_home: str) -> None:
+    """
+    sanity check: java binary must exist before we ask spark to launch jvm.
+    raises a clear error instead of letting py4j throw a cryptic
+    ConnectionRefusedError later when the jvm fails to start.
+    """
+    java_bin = Path(java_home) / "bin" / "java"
+    if not java_bin.exists():
+        raise RuntimeError(
+            f"java not found at {java_bin}. "
+            f"on colab, the bootstrap cell should run "
+            f"`apt-get install -y openjdk-11-jre-headless` and set "
+            f"JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64."
+        )
+
+
 def get_spark(app_name: str = "cs6513-311-nlp", local_cores: str = "*") -> SparkSession:
     """
     create or return the active spark session, configured for delta lake
@@ -74,7 +128,15 @@ def get_spark(app_name: str = "cs6513-311-nlp", local_cores: str = "*") -> Spark
     Returns:
         a configured SparkSession.
     """
+    # belt-and-suspenders: kill any lingering spark state from a previous
+    # crashed run before we build a fresh session
+    _kill_stale_session()
+
     project_root = _detect_project_root()
+
+    # verify java is actually present before py4j bothers trying to talk to it
+    java_home = os.environ.get("JAVA_HOME", "/usr/lib/jvm/java-11-openjdk-amd64")
+    _verify_java(java_home)
 
     # belt-and-suspenders: also set PYTHONPATH so any *new* worker process
     # picks up the src/ path even before addPyFile runs.

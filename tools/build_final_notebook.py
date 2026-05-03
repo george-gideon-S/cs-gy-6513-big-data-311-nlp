@@ -200,9 +200,22 @@ if '/content/project' not in sys.path:
 # 4) install pinned deps. -q hides pip's giant install log
 !pip install -r /content/project/requirements-train.txt -q
 
-# 5) java 11 for pyspark (java 17 has a netty bug with local-mode spark on linux)
-!apt-get install -y openjdk-11-jre-headless > /dev/null 2>&1
-os.environ['JAVA_HOME'] = '/usr/lib/jvm/java-11-openjdk-amd64'
+# 5) java 11 for pyspark (java 17 has a netty bug with local-mode spark on linux).
+#    skip the apt-get install on warm restart - the JDK persists across cell runs
+#    in the same VM even though the python kernel can be re-attached. we use
+#    subprocess.run rather than the bang-magic so the gating if/else parses
+#    correctly under static analysis tools.
+from pathlib import Path as _Path
+_JDK_DIR = '/usr/lib/jvm/java-11-openjdk-amd64'
+if not _Path(_JDK_DIR).exists():
+    print('installing openjdk-11 (cold start)...')
+    subprocess.run(
+        ['apt-get', 'install', '-y', 'openjdk-11-jre-headless'],
+        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+else:
+    print('openjdk-11 already present at /usr/lib/jvm/java-11-openjdk-amd64 (skipping apt-get)')
+os.environ['JAVA_HOME'] = _JDK_DIR
 os.environ['PATH'] = os.environ['JAVA_HOME'] + '/bin:' + os.environ['PATH']
 
 # 6) nltk data to /root/nltk_data so spark workers find it via default search path
@@ -264,6 +277,8 @@ Below is a small set of helper functions for printing readable output. ASCII ban
 cells.append(code("""
 # minimal output decorations - ASCII banners and plain prints. no HTML, no CSS,
 # no plotly palette tricks. matplotlib is still used where charts are needed.
+from pathlib import Path
+
 
 def banner(title, subtitle='', char='=', width=78):
     bar = char * width
@@ -299,7 +314,21 @@ def show_table(df, max_rows=None):
     print(df.to_string(index=False))
 
 
-print('output helpers defined: banner, phase_header, section, metric, show_table')
+def all_exist(*paths):
+    # returns True if every path exists on disk. used by phase resume gates.
+    return all(Path(p).exists() for p in paths)
+
+
+def parquet_row_count(spark, path):
+    # count rows in a parquet path. returns 0 on failure (missing path, schema drift).
+    # used to confirm a checkpoint is real before trusting it on resume.
+    try:
+        return spark.read.parquet(path).count()
+    except Exception:
+        return 0
+
+
+print('output helpers defined: banner, phase_header, section, metric, show_table, all_exist, parquet_row_count')
 """))
 
 
@@ -370,30 +399,50 @@ Once both halves are persisted to Drive, we union them. With `src/config.py::SAM
 """))
 
 cells.append(code("""
-# pull from the 2020+ endpoint. with a soda token this is ~10-12 min for 5m rows.
+# phase 1 resume check - if the final phase-1 artifact (sample_2m.parquet) is
+# already on drive with enough rows, skip the entire ingest+union+sample chain.
+# the per-endpoint fetch is already crash-safe inside fetch_311_to_parquet,
+# but the union/sample step is not - the gate here covers the post-pull work too.
 from src.config import SODA_2020_PLUS, SODA_2010_2019
 from src.ingest import fetch_311_to_parquet
 
+PHASE_1_OUT = '/content/drive/MyDrive/cs6513/sample_2m.parquet'
+PHASE_1_SKIP = False
+if Path(PHASE_1_OUT).exists() and parquet_row_count(spark, PHASE_1_OUT) >= 500_000:
+    print(f'phase 1 already complete: {PHASE_1_OUT} exists with sufficient rows')
+    print(f'loading existing artifact and skipping the heavy ingest work')
+    sample = spark.read.parquet(PHASE_1_OUT)
+    n_combined = sample.count()
+    n_sample = n_combined
+    PHASE_1_SKIP = True
+
+# pull from the 2020+ endpoint. with a soda token this is ~10-12 min for 5m rows.
 out_path_2020 = '/content/drive/MyDrive/cs6513/raw/2020plus.parquet'
-n_2020 = fetch_311_to_parquet(
-    spark=spark,
-    endpoint=SODA_2020_PLUS,
-    target_rows=5_000_000,  # 5m rows from the 2020+ side (~1.5 GB raw csv)
-    out_path=out_path_2020,
-)
-print(f'2020+ done. {n_2020:,} rows on disk at {out_path_2020}')
+if not PHASE_1_SKIP:
+    n_2020 = fetch_311_to_parquet(
+        spark=spark,
+        endpoint=SODA_2020_PLUS,
+        target_rows=5_000_000,  # 5m rows from the 2020+ side (~1.5 GB raw csv)
+        out_path=out_path_2020,
+    )
+    print(f'2020+ done. {n_2020:,} rows on disk at {out_path_2020}')
+else:
+    print('skipping 2020+ pull (phase 1 sample already present)')
 """))
 
 cells.append(code("""
 # pull from the 2010-2019 historical endpoint
 out_path_hist = '/content/drive/MyDrive/cs6513/raw/historical.parquet'
-n_hist = fetch_311_to_parquet(
-    spark=spark,
-    endpoint=SODA_2010_2019,
-    target_rows=5_000_000,  # 5m rows from the historical side (~1.5 GB raw csv)
-    out_path=out_path_hist,
-)
-print(f'2010-2019 done. {n_hist:,} rows on disk at {out_path_hist}')
+if not PHASE_1_SKIP:
+    n_hist = fetch_311_to_parquet(
+        spark=spark,
+        endpoint=SODA_2010_2019,
+        target_rows=5_000_000,  # 5m rows from the historical side (~1.5 GB raw csv)
+        out_path=out_path_hist,
+    )
+    print(f'2010-2019 done. {n_hist:,} rows on disk at {out_path_hist}')
+else:
+    print('skipping historical pull (phase 1 sample already present)')
 """))
 
 cells.append(code("""
@@ -401,13 +450,17 @@ cells.append(code("""
 from pyspark.sql import functions as F
 from src.ingest import normalize_columns
 
-df_2020 = normalize_columns(spark.read.parquet(out_path_2020))
-df_hist = normalize_columns(spark.read.parquet(out_path_hist))
+if not PHASE_1_SKIP:
+    df_2020 = normalize_columns(spark.read.parquet(out_path_2020))
+    df_hist = normalize_columns(spark.read.parquet(out_path_hist))
 
-combined = df_2020.unionByName(df_hist, allowMissingColumns=True)
-n_combined = combined.count()
-print(f'combined row count: {n_combined:,}')
-combined.printSchema()
+    combined = df_2020.unionByName(df_hist, allowMissingColumns=True)
+    n_combined = combined.count()
+    print(f'combined row count: {n_combined:,}')
+    combined.printSchema()
+else:
+    print(f'phase 1 already complete - using cached sample with {n_combined:,} rows')
+    sample.printSchema()
 """))
 
 cells.append(code("""
@@ -415,24 +468,29 @@ cells.append(code("""
 from src.ingest import stratified_sample
 from src.config import SAMPLE_SIZE
 
-if SAMPLE_SIZE is None:
-    sample = combined
-    print(f'full-corpus mode (SAMPLE_SIZE=None). using all {n_combined:,} rows.')
+if not PHASE_1_SKIP:
+    if SAMPLE_SIZE is None:
+        sample = combined
+        print(f'full-corpus mode (SAMPLE_SIZE=None). using all {n_combined:,} rows.')
+    else:
+        sample = stratified_sample(combined, target_size=SAMPLE_SIZE, label_col='problem')
+        print(f'stratified sample size: {sample.count():,}')
+
+    # add year partition column for cheap downstream filters
+    sample = sample.withColumn('year', F.year('created_date'))
+
+    # filename is sample_2m.parquet for backward compat across all downstream phases,
+    # even though this run actually holds ~10M rows. naming purity vs touching every
+    # notebook downstream - we picked the latter cost.
+    out_sample = '/content/drive/MyDrive/cs6513/sample_2m.parquet'
+    sample.write.mode('overwrite').partitionBy('year').parquet(out_sample)
+    print(f'sample written to {out_sample}')
+
+    n_sample = sample.count()
 else:
-    sample = stratified_sample(combined, target_size=SAMPLE_SIZE, label_col='problem')
-    print(f'stratified sample size: {sample.count():,}')
+    out_sample = PHASE_1_OUT
+    print(f'using cached sample at {out_sample}')
 
-# add year partition column for cheap downstream filters
-sample = sample.withColumn('year', F.year('created_date'))
-
-# filename is sample_2m.parquet for backward compat across all downstream phases,
-# even though this run actually holds ~10M rows. naming purity vs touching every
-# notebook downstream - we picked the latter cost.
-out_sample = '/content/drive/MyDrive/cs6513/sample_2m.parquet'
-sample.write.mode('overwrite').partitionBy('year').parquet(out_sample)
-print(f'sample written to {out_sample}')
-
-n_sample = sample.count()
 section('phase 1 metrics')
 metric('Rows ingested', f'{n_sample:,}', 'after union')
 metric('Years covered', '2010-2025', 'partitioned by year')
@@ -485,49 +543,74 @@ Why this matters for the model: without canonicalization, the StringIndexer in P
 """))
 
 cells.append(code("""
+# phase 2 resume check - if sample_2m_preprocessed.parquet is on drive with
+# the tokens column populated, skip the entire preprocess pipeline. downstream
+# phases just read the parquet so we still need df_tok bound for the cells
+# that compute stats / write the sidecar json.
+PHASE_2_OUT = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
+PHASE_2_SKIP = False
+if Path(PHASE_2_OUT).exists() and parquet_row_count(spark, PHASE_2_OUT) >= 500_000:
+    # confirm the tokens column is actually there - the gate must check shape, not just count
+    _cols = spark.read.parquet(PHASE_2_OUT).columns
+    if 'tokens' in _cols and 'label_canonical' in _cols:
+        print(f'phase 2 already complete: {PHASE_2_OUT} exists with tokens column')
+        print(f'loading existing artifact and skipping the heavy preprocess work')
+        df_tok = spark.read.parquet(PHASE_2_OUT)
+        PHASE_2_SKIP = True
+    else:
+        print(f'phase 2 parquet exists but missing required columns - re-running preprocess')
+
 # load phase 1 sample and inspect the raw label distribution
 in_path = '/content/drive/MyDrive/cs6513/sample_2m.parquet'
-df_raw = spark.read.parquet(in_path)
-n_loaded = df_raw.count()
-print(f'loaded {n_loaded:,} rows from phase 1 sample')
+if not PHASE_2_SKIP:
+    df_raw = spark.read.parquet(in_path)
+    n_loaded = df_raw.count()
+    print(f'loaded {n_loaded:,} rows from phase 1 sample')
 
-# raw top 30 labels - looking for the all-caps vs title-case duplicates
-raw_top30 = (
-    df_raw.groupBy('problem').count()
-    .orderBy(F.desc('count')).limit(30).toPandas()
-)
-print(f'distinct raw labels: {df_raw.select(\"problem\").distinct().count()}')
+    # raw top 30 labels - looking for the all-caps vs title-case duplicates
+    raw_top30 = (
+        df_raw.groupBy('problem').count()
+        .orderBy(F.desc('count')).limit(30).toPandas()
+    )
+    print(f'distinct raw labels: {df_raw.select(\"problem\").distinct().count()}')
+else:
+    print('skipping raw label inspection (phase 2 already done)')
 """))
 
 cells.append(code("""
 # apply canonicalization
 from src.preprocess import add_canonical_label
-
-df_labeled = add_canonical_label(df_raw, in_col='problem', out_col='label_canonical')
-
-canonical_top30 = (
-    df_labeled.groupBy('label_canonical').count()
-    .orderBy(F.desc('count')).limit(30).toPandas()
-)
-
-# build a side-by-side comparison of raw vs canonical top-15 to show what changed
 import pandas as pd
-side = pd.DataFrame({
-    'rank': range(1, 16),
-    'raw_label': raw_top30['problem'].iloc[:15].values,
-    'raw_count': raw_top30['count'].iloc[:15].values,
-    'canonical_label': canonical_top30['label_canonical'].iloc[:15].values,
-    'canonical_count': canonical_top30['count'].iloc[:15].values,
-})
-section('Raw vs canonical labels (top 15)')
-show_table(side)
 
-n_raw_distinct = df_raw.select('problem').distinct().count()
-n_canon_distinct = df_labeled.select('label_canonical').distinct().count()
-section('canonicalization summary')
-metric('Raw labels', f'{n_raw_distinct:,}')
-metric('Canonical labels', f'{n_canon_distinct:,}', 'after merging synonyms')
-metric('Pairs collapsed', f'{n_raw_distinct - n_canon_distinct:,}')
+if not PHASE_2_SKIP:
+    df_labeled = add_canonical_label(df_raw, in_col='problem', out_col='label_canonical')
+
+    canonical_top30 = (
+        df_labeled.groupBy('label_canonical').count()
+        .orderBy(F.desc('count')).limit(30).toPandas()
+    )
+
+    # build a side-by-side comparison of raw vs canonical top-15 to show what changed
+    side = pd.DataFrame({
+        'rank': range(1, 16),
+        'raw_label': raw_top30['problem'].iloc[:15].values,
+        'raw_count': raw_top30['count'].iloc[:15].values,
+        'canonical_label': canonical_top30['label_canonical'].iloc[:15].values,
+        'canonical_count': canonical_top30['count'].iloc[:15].values,
+    })
+    section('Raw vs canonical labels (top 15)')
+    show_table(side)
+
+    n_raw_distinct = df_raw.select('problem').distinct().count()
+    n_canon_distinct = df_labeled.select('label_canonical').distinct().count()
+    section('canonicalization summary')
+    metric('Raw labels', f'{n_raw_distinct:,}')
+    metric('Canonical labels', f'{n_canon_distinct:,}', 'after merging synonyms')
+    metric('Pairs collapsed', f'{n_raw_distinct - n_canon_distinct:,}')
+else:
+    # we still need n_canon_distinct for the sidecar json downstream
+    n_canon_distinct = df_tok.select('label_canonical').distinct().count()
+    print(f'skipped canonicalization step ({n_canon_distinct} canonical labels in cached parquet)')
 """))
 
 cells.append(md("""
@@ -539,13 +622,40 @@ The `TextPreprocessor` Spark transformer is in `src/preprocess.py`. It wraps the
 cells.append(code("""
 from src.preprocess import TextPreprocessor
 
-preproc = TextPreprocessor(input_col='problem_detail', output_col='tokens')
-df_tok = preproc.transform(df_labeled)
+if not PHASE_2_SKIP:
+    preproc = TextPreprocessor(input_col='problem_detail', output_col='tokens')
+    df_tok = preproc.transform(df_labeled)
 
-# sample a few rows to eyeball that tokenization makes sense
-sample_pdf = df_tok.select('problem_detail', 'tokens').limit(5).toPandas()
-section('Tokenization sample (first 5 rows)')
-show_table(sample_pdf)
+    # mid-phase checkpoint: save the tokenized output BEFORE the empty-token filter
+    # and the final write. that way if the empty-filter or final write step blows up,
+    # the expensive tokenize transform survives and the next run resumes from here.
+    TOKENS_CKPT = '/content/drive/MyDrive/cs6513/sample_2m.tokens.parquet'
+    if not Path(TOKENS_CKPT).exists():
+        print(f'writing mid-phase tokens checkpoint to {TOKENS_CKPT} (covers crash before final write)')
+        (
+            df_tok
+            .select(
+                'unique_key', 'created_date', 'closed_date',
+                'agency', 'problem', 'label_canonical', 'problem_detail',
+                'borough', 'incident_zip', 'latitude', 'longitude',
+                'status', 'tokens',
+            )
+            .write.mode('overwrite').parquet(TOKENS_CKPT)
+        )
+        # re-read so subsequent counts come from the materialized parquet, not a lazy plan
+        df_tok = spark.read.parquet(TOKENS_CKPT)
+    else:
+        print(f'reusing tokens checkpoint at {TOKENS_CKPT}')
+        df_tok = spark.read.parquet(TOKENS_CKPT)
+
+    # sample a few rows to eyeball that tokenization makes sense
+    sample_pdf = df_tok.select('problem_detail', 'tokens').limit(5).toPandas()
+    section('Tokenization sample (first 5 rows)')
+    show_table(sample_pdf)
+else:
+    sample_pdf = df_tok.select('problem_detail', 'tokens').limit(5).toPandas()
+    section('Tokenization sample (first 5 rows, from cached parquet)')
+    show_table(sample_pdf)
 """))
 
 cells.append(code("""
@@ -586,19 +696,23 @@ plt.show()
 cells.append(code("""
 # write the preprocessed parquet. phases 3-10 read from this single artifact.
 out_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
-(
-    df_tok
-    .select(
-        'unique_key', 'created_date', 'closed_date',
-        'agency', 'problem', 'label_canonical', 'problem_detail',
-        'borough', 'incident_zip', 'latitude', 'longitude',
-        'status', 'tokens',
+if not PHASE_2_SKIP:
+    (
+        df_tok
+        .select(
+            'unique_key', 'created_date', 'closed_date',
+            'agency', 'problem', 'label_canonical', 'problem_detail',
+            'borough', 'incident_zip', 'latitude', 'longitude',
+            'status', 'tokens',
+        )
+        .write.mode('overwrite').parquet(out_path)
     )
-    .write.mode('overwrite').parquet(out_path)
-)
-print(f'preprocessed parquet written to {out_path}')
+    print(f'preprocessed parquet written to {out_path}')
+else:
+    print(f'preprocessed parquet already at {out_path} (phase 2 skipped)')
 
-# stats sidecar so the dashboard can show pipeline status without re-reading the parquet
+# stats sidecar so the dashboard can show pipeline status without re-reading the parquet.
+# this writes unconditionally - cheap to recompute and the dashboard treats it as source of truth.
 import json
 stats = {
     'rows_total': int(n_total),
@@ -634,10 +748,24 @@ The first modeling phase. We train a TF-IDF plus multinomial Logistic Regression
 """))
 
 cells.append(code("""
-# load the preprocessed parquet, filter empty token rows, keep top-20 categories
+# phase 3 resume check - if the portable .npz AND the summary json are both on
+# disk, the classifier has already trained successfully. skip the entire fit
+# step. we still load test set + reload the spark PipelineModel so the
+# evaluate / confusion-matrix cells below can render against cached predictions.
 from src.config import TOP_K_CATEGORIES
 from src.classify import stratified_split, build_pipeline, evaluate, export_portable
+from pyspark.ml import PipelineModel
 
+PHASE_3_NPZ = '/content/project/models/portable/classifier.npz'
+PHASE_3_JSON = '/content/project/dashboard/assets/classifier_summary.json'
+PHASE_3_SPARK = '/content/drive/MyDrive/cs6513/models/classifier_lr'
+PHASE_3_SKIP = all_exist(PHASE_3_NPZ, PHASE_3_JSON) and Path(PHASE_3_SPARK).exists()
+
+if PHASE_3_SKIP:
+    print(f'phase 3 already complete: {PHASE_3_NPZ} and {PHASE_3_JSON} exist')
+    print(f'skipping pipeline.fit -- artifact already exists')
+
+# load the preprocessed parquet, filter empty token rows, keep top-20 categories
 in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
 df_full = spark.read.parquet(in_path)
 
@@ -655,7 +783,7 @@ df_train_pool = df_clean.filter(F.col('label_canonical').isin(top_class_list))
 n_train_pool = df_train_pool.count()
 print(f'training pool (top {TOP_K_CATEGORIES} classes): {n_train_pool:,} rows')
 
-# stratified 80/20 split
+# stratified 80/20 split. needed even on resume so the eval cells have a test set.
 train, test = stratified_split(df_train_pool, label_col='label_canonical', test_fraction=0.2)
 n_train = train.count()
 n_test = test.count()
@@ -663,14 +791,27 @@ print(f'train: {n_train:,}  test: {n_test:,}')
 """))
 
 cells.append(code("""
-# build pipeline and fit
+# build pipeline and fit. mid-phase checkpoint: save Spark PipelineModel to
+# drive BEFORE running evaluate. evaluate can OOM or time out on a large test
+# set, so the fit result is the expensive thing to protect.
 import time
 pipeline = build_pipeline(label_col='label_canonical', num_features=16384, min_doc_freq=10)
 
-t0 = time.time()
-lr_model = pipeline.fit(train)
-t_fit = time.time() - t0
-print(f'logistic regression fit in {t_fit:.1f} sec')
+if not PHASE_3_SKIP:
+    t0 = time.time()
+    lr_model = pipeline.fit(train)
+    t_fit = time.time() - t0
+    print(f'logistic regression fit in {t_fit:.1f} sec')
+
+    # mid-phase checkpoint: persist Spark PipelineModel to drive immediately
+    # so any downstream crash (evaluate, sklearn metrics, plotting) does not
+    # cost us another fit cycle.
+    print(f'saving Spark PipelineModel to {PHASE_3_SPARK} (mid-phase checkpoint)')
+    lr_model.write().overwrite().save(PHASE_3_SPARK)
+else:
+    print(f'loading existing Spark PipelineModel from {PHASE_3_SPARK}')
+    lr_model = PipelineModel.load(PHASE_3_SPARK)
+    t_fit = 0.0  # unknown for a cached model; summary json on disk has the real time
 
 # evaluate on test
 lr_metrics = evaluate(lr_model, test)
@@ -791,12 +932,13 @@ plt.show()
 """))
 
 cells.append(code("""
-# save full PipelineModel + portable .npz for the dashboard
-model_path = '/content/drive/MyDrive/cs6513/models/classifier_lr'
-lr_model.write().overwrite().save(model_path)
-print(f'full PipelineModel saved to {model_path}')
+# save full PipelineModel + portable .npz for the dashboard. the spark model
+# write was already done as the mid-phase checkpoint above; here we just confirm
+# it's there and write the portable npz / summary json.
+import datetime, json
+print(f'spark PipelineModel already at {PHASE_3_SPARK}')
 
-portable_path = '/content/project/models/portable/classifier.npz'
+portable_path = PHASE_3_NPZ
 os.makedirs(os.path.dirname(portable_path), exist_ok=True)
 export_portable(lr_model, portable_path)
 
@@ -804,7 +946,6 @@ size_mb = os.path.getsize(portable_path) / 1024 / 1024
 print(f'portable artifact size: {size_mb:.2f} MB')
 
 # summary json for the dashboard pipeline-status tile
-import datetime, json
 summary = {
     'phase': 3,
     'trained_at': datetime.datetime.utcnow().isoformat() + 'Z',
@@ -823,7 +964,7 @@ summary = {
     'lift_over_keyword_f1': float(lr_metrics['f1'] - f1_keyword),
     'training_time_sec': float(t_fit),
 }
-with open('/content/project/dashboard/assets/classifier_summary.json', 'w') as f:
+with open(PHASE_3_JSON, 'w') as f:
     json.dump(summary, f, indent=2, default=str)
 print('classifier_summary.json saved')
 """))
@@ -850,10 +991,24 @@ The second modeling phase. We predict resolution time (closed_date minus created
 """))
 
 cells.append(code("""
-# load preprocessed, filter to closed complaints with valid resolution time, top-20 only
+# phase 4 resume check - if portable regressor.npz AND summary json are both
+# on disk, skip the v1 + v2 fits. we still need train_r / test_r for the
+# eval and per-category breakdown cells, so the data load runs unconditionally.
 from pyspark.sql import functions as F
+from pyspark.ml import PipelineModel
 from src.config import TOP_K_CATEGORIES
 
+PHASE_4_NPZ = '/content/project/models/portable/regressor.npz'
+PHASE_4_JSON = '/content/project/dashboard/assets/regressor_summary.json'
+PHASE_4_V1_SPARK = '/content/drive/MyDrive/cs6513/models/regressor_lr_v1'
+PHASE_4_V2_SPARK = '/content/drive/MyDrive/cs6513/models/regressor_lr_v2'
+PHASE_4_SKIP = all_exist(PHASE_4_NPZ, PHASE_4_JSON) and Path(PHASE_4_V2_SPARK).exists()
+
+if PHASE_4_SKIP:
+    print(f'phase 4 already complete: {PHASE_4_NPZ} and {PHASE_4_JSON} exist')
+    print(f'skipping v1 + v2 fit -- artifacts already exist')
+
+# load preprocessed, filter to closed complaints with valid resolution time, top-20 only
 in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
 df_full = spark.read.parquet(in_path)
 
@@ -916,10 +1071,29 @@ pipe_v1 = Pipeline(stages=[
     htf_r, idf_r, assembler_v1, lr_alg_v1,
 ])
 
-t0 = time.time()
-model_v1 = pipe_v1.fit(train_r)
-t_v1 = time.time() - t0
-print(f'v1 fit in {t_v1:.1f} sec')
+if not PHASE_4_SKIP:
+    t0 = time.time()
+    model_v1 = pipe_v1.fit(train_r)
+    t_v1 = time.time() - t0
+    print(f'v1 fit in {t_v1:.1f} sec')
+
+    # mid-phase checkpoint: save v1 spark model BEFORE running evaluate. this
+    # lets us skip the v1 fit on resume too, even though only v2 is the
+    # production model.
+    print(f'saving v1 spark model to {PHASE_4_V1_SPARK} (mid-phase checkpoint)')
+    model_v1.write().overwrite().save(PHASE_4_V1_SPARK)
+elif Path(PHASE_4_V1_SPARK).exists():
+    print(f'loading existing v1 spark model from {PHASE_4_V1_SPARK}')
+    model_v1 = PipelineModel.load(PHASE_4_V1_SPARK)
+    t_v1 = 0.0
+else:
+    # v2 cached, v1 missing - re-fit v1 because the comparison cells need it
+    print('v2 artifact present but v1 spark model missing - re-fitting v1 to populate metrics')
+    t0 = time.time()
+    model_v1 = pipe_v1.fit(train_r)
+    t_v1 = time.time() - t0
+    print(f'v1 fit in {t_v1:.1f} sec')
+    model_v1.write().overwrite().save(PHASE_4_V1_SPARK)
 """))
 
 cells.append(code("""
@@ -979,12 +1153,23 @@ pipe_v2 = Pipeline(stages=[
     htf_r, idf_r, assembler_v2, lr_alg_v2,
 ])
 
-t0 = time.time()
-model_v2 = pipe_v2.fit(train_r)
-t_v2 = time.time() - t0
-print(f'v2 fit in {t_v2:.1f} sec')
+if not PHASE_4_SKIP:
+    t0 = time.time()
+    model_v2 = pipe_v2.fit(train_r)
+    t_v2 = time.time() - t0
+    print(f'v2 fit in {t_v2:.1f} sec')
 
-# evaluate v2
+    # mid-phase checkpoint: save v2 spark model on drive BEFORE evaluate /
+    # post-processing. evaluate has to scan the full test_r which can OOM
+    # on a tight executor.
+    print(f'saving v2 spark model to {PHASE_4_V2_SPARK} (mid-phase checkpoint)')
+    model_v2.write().overwrite().save(PHASE_4_V2_SPARK)
+else:
+    print(f'loading existing v2 spark model from {PHASE_4_V2_SPARK}')
+    model_v2 = PipelineModel.load(PHASE_4_V2_SPARK)
+    t_v2 = 0.0
+
+# evaluate v2 (always runs - cheap and produces the metrics the cells below need)
 preds_v2 = model_v2.transform(test_r).select(
     'resolution_hours', F.expm1('prediction').alias('predicted_hours'),
 ).toPandas()
@@ -1048,13 +1233,16 @@ show_table(by_cat.reset_index())
 """))
 
 cells.append(code("""
-# save v2 portable + summary json
+# save v2 portable + summary json. spark v2 model was already checkpointed
+# above as the mid-phase save, so we only need the .npz + summary jsons here.
+import datetime, json
+
 lr_stage_v2 = model_v2.stages[-1]
 agency_labels = model_v2.stages[0].labels
 borough_labels = model_v2.stages[1].labels
 cat_labels = model_v2.stages[2].labels
 
-portable_path = '/content/project/models/portable/regressor.npz'
+portable_path = PHASE_4_NPZ
 os.makedirs(os.path.dirname(portable_path), exist_ok=True)
 np.savez_compressed(
     portable_path,
@@ -1069,12 +1257,8 @@ np.savez_compressed(
     version='v2_with_category',
 )
 print(f'portable regressor saved ({os.path.getsize(portable_path) / 1024 / 1024:.2f} MB)')
+print(f'v2 spark model already at {PHASE_4_V2_SPARK}')
 
-v2_model_path = '/content/drive/MyDrive/cs6513/models/regressor_lr_v2'
-model_v2.write().overwrite().save(v2_model_path)
-print(f'v2 spark model saved to {v2_model_path}')
-
-import datetime, json
 summary = {
     'phase': 4,
     'trained_at': datetime.datetime.utcnow().isoformat() + 'Z',
@@ -1088,7 +1272,7 @@ summary = {
     'v1_improvement_pct': float(improvement_v1),
     'training_time_sec': float(t_v2),
 }
-with open('/content/project/dashboard/assets/regressor_summary.json', 'w') as f:
+with open(PHASE_4_JSON, 'w') as f:
     json.dump(summary, f, indent=2, default=str)
 print('regressor_summary.json saved')
 
@@ -1116,24 +1300,52 @@ The proposal predicted we would find an "urban decay" cluster -- rats, trash, an
 """))
 
 cells.append(code("""
+# phase 5 resume check - if word2vec.kv AND cluster_summary.json are both
+# on disk, skip the entire word2vec + kmeans sweep. we still need df_w2v
+# loaded so the synonym-probe and cluster-callout cells have something to
+# operate on, plus the spark word2vec model is reloaded from drive so the
+# probe cell can call findSynonymsArray.
+from pyspark.ml.feature import Word2Vec, Word2VecModel
+from pyspark.ml.clustering import KMeans, KMeansModel
+import time
+
+PHASE_5_KV = '/content/project/models/portable/word2vec.kv'
+PHASE_5_JSON = '/content/project/dashboard/assets/cluster_summary.json'
+PHASE_5_W2V_SPARK = '/content/drive/MyDrive/cs6513/models/word2vec'
+PHASE_5_KM_SPARK = '/content/drive/MyDrive/cs6513/models/kmeans_w2v'
+PHASE_5_SKIP = all_exist(PHASE_5_KV, PHASE_5_JSON) and Path(PHASE_5_W2V_SPARK).exists()
+
+if PHASE_5_SKIP:
+    print(f'phase 5 already complete: {PHASE_5_KV} and {PHASE_5_JSON} exist')
+    print(f'skipping word2vec + kmeans -- artifacts already exist')
+
 # load preprocessed, require >=2 tokens for cluster quality
 in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
 df_w2v = spark.read.parquet(in_path).filter(F.size('tokens') >= 2)
 n_w2v = df_w2v.count()
 print(f'rows with >=2 tokens: {n_w2v:,}')
 
-from pyspark.ml.feature import Word2Vec
-import time
+if not PHASE_5_SKIP:
+    w2v = Word2Vec(
+        vectorSize=100, windowSize=5, minCount=5,
+        inputCol='tokens', outputCol='doc_vec', seed=42,
+    )
+    t0 = time.time()
+    w2v_model = w2v.fit(df_w2v)
+    t_w2v = time.time() - t0
+    vocab_size = w2v_model.getVectors().count()
+    print(f'word2vec fit in {t_w2v:.1f} sec; vocab size = {vocab_size:,}')
 
-w2v = Word2Vec(
-    vectorSize=100, windowSize=5, minCount=5,
-    inputCol='tokens', outputCol='doc_vec', seed=42,
-)
-t0 = time.time()
-w2v_model = w2v.fit(df_w2v)
-t_w2v = time.time() - t0
-vocab_size = w2v_model.getVectors().count()
-print(f'word2vec fit in {t_w2v:.1f} sec; vocab size = {vocab_size:,}')
+    # mid-phase checkpoint: save spark word2vec to drive BEFORE the kmeans sweep.
+    # the sweep can take 5-10 minutes and we do not want to retrain word2vec if
+    # the silhouette evaluator OOMs.
+    print(f'saving word2vec spark model to {PHASE_5_W2V_SPARK} (mid-phase checkpoint)')
+    w2v_model.write().overwrite().save(PHASE_5_W2V_SPARK)
+else:
+    print(f'loading existing spark word2vec from {PHASE_5_W2V_SPARK}')
+    w2v_model = Word2VecModel.load(PHASE_5_W2V_SPARK)
+    vocab_size = w2v_model.getVectors().count()
+    t_w2v = 0.0
 """))
 
 cells.append(md("""
@@ -1162,30 +1374,38 @@ cells.append(code("""
 df_vec = w2v_model.transform(df_w2v).select('unique_key', 'label_canonical', 'tokens', 'doc_vec').cache()
 df_vec.count()  # materialize cache
 
-from pyspark.ml.clustering import KMeans
 from pyspark.ml.evaluation import ClusteringEvaluator
+import json
 
 evaluator = ClusteringEvaluator(
     featuresCol='doc_vec', predictionCol='cluster', metricName='silhouette',
 )
 
-# sample 200K for silhouette eval (O(n^2))
-df_eval = df_vec.sample(fraction=200_000 / n_w2v, seed=42).cache()
-df_eval.count()
+if not PHASE_5_SKIP:
+    # sample 200K for silhouette eval (O(n^2))
+    df_eval = df_vec.sample(fraction=200_000 / n_w2v, seed=42).cache()
+    df_eval.count()
 
-results = []
-for k in [5, 10, 15, 20, 25, 30]:
-    t0 = time.time()
-    km = KMeans(featuresCol='doc_vec', predictionCol='cluster', k=k, seed=42, maxIter=20)
-    km_model = km.fit(df_eval)
-    t_fit = time.time() - t0
-    preds_k = km_model.transform(df_eval)
-    score = evaluator.evaluate(preds_k)
-    results.append((k, float(score), float(t_fit)))
-    print(f'  k={k:>3}  silhouette={score:.4f}  fit_time={t_fit:.1f}s')
+    results = []
+    for k in [5, 10, 15, 20, 25, 30]:
+        t0 = time.time()
+        km = KMeans(featuresCol='doc_vec', predictionCol='cluster', k=k, seed=42, maxIter=20)
+        km_model = km.fit(df_eval)
+        t_fit = time.time() - t0
+        preds_k = km_model.transform(df_eval)
+        score = evaluator.evaluate(preds_k)
+        results.append((k, float(score), float(t_fit)))
+        print(f'  k={k:>3}  silhouette={score:.4f}  fit_time={t_fit:.1f}s')
 
-best_k, best_score, _ = max(results, key=lambda r: r[1])
-print(f'\\nbest k = {best_k} (silhouette = {best_score:.4f})')
+    best_k, best_score, _ = max(results, key=lambda r: r[1])
+    print(f'\\nbest k = {best_k} (silhouette = {best_score:.4f})')
+else:
+    # resume: pull sweep results + best_k/best_score from cached cluster_summary.json
+    cached = json.loads(Path(PHASE_5_JSON).read_text())
+    results = [(int(item['k']), float(item['silhouette']), 0.0) for item in cached.get('sweep', [])]
+    best_k = int(cached['kmeans']['best_k'])
+    best_score = float(cached['kmeans']['silhouette'])
+    print(f'loaded cached sweep results: best k = {best_k} (silhouette = {best_score:.4f})')
 """))
 
 cells.append(code("""
@@ -1208,11 +1428,26 @@ plt.show()
 """))
 
 cells.append(code("""
-# refit kmeans at best k on the full data, then top terms + cross-tab
-km_final = KMeans(featuresCol='doc_vec', predictionCol='cluster', k=best_k, seed=42, maxIter=20)
-t0 = time.time()
-km_final_model = km_final.fit(df_vec)
-print(f'final kmeans fit in {time.time()-t0:.1f} sec')
+# refit kmeans at best k on the full data, then top terms + cross-tab.
+# mid-phase checkpoint: save final kmeans BEFORE the cross-tab + entropy
+# analysis. cross-tab .toPandas() can OOM the driver on 1.9M rows.
+if not PHASE_5_SKIP:
+    km_final = KMeans(featuresCol='doc_vec', predictionCol='cluster', k=best_k, seed=42, maxIter=20)
+    t0 = time.time()
+    km_final_model = km_final.fit(df_vec)
+    print(f'final kmeans fit in {time.time()-t0:.1f} sec')
+
+    print(f'saving final kmeans to {PHASE_5_KM_SPARK} (mid-phase checkpoint)')
+    km_final_model.write().overwrite().save(PHASE_5_KM_SPARK)
+elif Path(PHASE_5_KM_SPARK).exists():
+    print(f'loading existing final kmeans from {PHASE_5_KM_SPARK}')
+    km_final_model = KMeansModel.load(PHASE_5_KM_SPARK)
+else:
+    # word2vec cached but no final kmeans on disk - refit at best_k
+    print(f'no cached final kmeans - refitting at best_k = {best_k}')
+    km_final = KMeans(featuresCol='doc_vec', predictionCol='cluster', k=best_k, seed=42, maxIter=20)
+    km_final_model = km_final.fit(df_vec)
+    km_final_model.write().overwrite().save(PHASE_5_KM_SPARK)
 
 df_clustered = km_final_model.transform(df_vec)
 
@@ -1293,13 +1528,13 @@ print('*' * 78)
 """))
 
 cells.append(code("""
-# save artifacts: word2vec spark model, gensim KeyedVectors portable, cluster summary json
+# save artifacts: gensim KeyedVectors portable, cluster summary json. spark
+# word2vec was already saved as the mid-phase checkpoint above.
 import gensim
 import numpy as np
+import datetime, json
 
-w2v_path = '/content/drive/MyDrive/cs6513/models/word2vec'
-w2v_model.write().overwrite().save(w2v_path)
-print(f'word2vec spark model saved to {w2v_path}')
+print(f'word2vec spark model already at {PHASE_5_W2V_SPARK}')
 
 vec_pdf = w2v_model.getVectors().toPandas()
 words = vec_pdf['word'].tolist()
@@ -1307,12 +1542,11 @@ vectors = np.stack([v.toArray() for v in vec_pdf['vector']])
 
 kv = gensim.models.KeyedVectors(vector_size=vectors.shape[1])
 kv.add_vectors(words, vectors)
-kv_path = '/content/project/models/portable/word2vec.kv'
+kv_path = PHASE_5_KV
 os.makedirs(os.path.dirname(kv_path), exist_ok=True)
 kv.save(kv_path)
 print(f'portable KeyedVectors saved ({os.path.getsize(kv_path) / 1024 / 1024:.2f} MB)')
 
-import datetime, json
 summary_w2v = {
     'phase': 5,
     'trained_at': datetime.datetime.utcnow().isoformat() + 'Z',
@@ -1326,7 +1560,7 @@ summary_w2v = {
     'training_time_sec': {'word2vec': float(t_w2v)},
     'urban_decay_cluster': urban_decay_cid,
 }
-with open('/content/project/dashboard/assets/cluster_summary.json', 'w') as f:
+with open(PHASE_5_JSON, 'w') as f:
     json.dump(summary_w2v, f, indent=2, default=str)
 print('cluster_summary.json saved')
 """))
@@ -1349,29 +1583,56 @@ The geographic phase. We aggregate complaints to the borough level and compute a
 """))
 
 cells.append(code("""
+# phase 6 resume check - if borough_volume.json AND borough_fingerprints.json
+# are both on disk, the per-borough aggregations have already run. skip the
+# whole pipeline. phase 6 is aggregation-only (no model fits) but the
+# fingerprint cross-tab still costs a couple minutes on the full corpus.
+PHASE_6_VOL = '/content/project/dashboard/assets/borough_volume.json'
+PHASE_6_FP = '/content/project/dashboard/assets/borough_fingerprints.json'
+PHASE_6_SKIP = all_exist(PHASE_6_VOL, PHASE_6_FP)
+
+if PHASE_6_SKIP:
+    print(f'phase 6 already complete: {PHASE_6_VOL} and {PHASE_6_FP} exist')
+    print(f'skipping borough aggregations -- artifacts already exist')
+
 # load + filter to rows with non-null borough and at least one token
 in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
-df_geo = (
-    spark.read.parquet(in_path)
-    .filter(F.size('tokens') > 0)
-    .filter(F.col('borough').isNotNull())
-    .withColumn('borough_norm', F.initcap(F.col('borough')))
-    .filter(F.col('borough_norm').isin(['Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'Staten Island']))
-    .select('unique_key', 'label_canonical', 'borough_norm', 'tokens')
-)
-n_geo = df_geo.count()
-print(f'rows after filter: {n_geo:,}')
+if not PHASE_6_SKIP:
+    df_geo = (
+        spark.read.parquet(in_path)
+        .filter(F.size('tokens') > 0)
+        .filter(F.col('borough').isNotNull())
+        .withColumn('borough_norm', F.initcap(F.col('borough')))
+        .filter(F.col('borough_norm').isin(['Bronx', 'Brooklyn', 'Manhattan', 'Queens', 'Staten Island']))
+        .select('unique_key', 'label_canonical', 'borough_norm', 'tokens')
+    )
+    n_geo = df_geo.count()
+    print(f'rows after filter: {n_geo:,}')
+else:
+    n_geo = 0  # only used in summary json which is also cached
+    print('skipping borough filter (cached)')
 """))
 
 cells.append(code("""
-# per-borough volume
-volume = (
-    df_geo.groupBy('borough_norm').count()
-    .withColumnRenamed('count', 'complaint_count')
-    .toPandas().sort_values('complaint_count', ascending=False)
-)
-
+# per-borough volume. on resume we just load the cached json so the chart
+# below renders the same numbers.
 import matplotlib.pyplot as plt
+import pandas as pd
+import json
+
+if not PHASE_6_SKIP:
+    volume = (
+        df_geo.groupBy('borough_norm').count()
+        .withColumnRenamed('count', 'complaint_count')
+        .toPandas().sort_values('complaint_count', ascending=False)
+    )
+else:
+    cached_vol = json.loads(Path(PHASE_6_VOL).read_text())
+    volume = pd.DataFrame([
+        {'borough_norm': k, 'complaint_count': int(v['count'])}
+        for k, v in cached_vol.items()
+    ]).sort_values('complaint_count', ascending=False)
+    print(f'loaded cached volume for {len(volume)} boroughs')
 
 fig, ax = plt.subplots(figsize=(9, 4))
 ax.barh(volume['borough_norm'][::-1], volume['complaint_count'][::-1])
@@ -1384,32 +1645,41 @@ plt.show()
 """))
 
 cells.append(code("""
-# per-borough TF-IDF lift
-exploded = df_geo.select('borough_norm', F.explode('tokens').alias('term'))
-by_borough = exploded.groupBy('borough_norm', 'term').count().withColumnRenamed('count', 'tf_borough')
-by_corpus = exploded.groupBy('term').count().withColumnRenamed('count', 'tf_corpus')
-corpus_total = by_corpus.agg(F.sum('tf_corpus')).collect()[0][0]
-by_corpus = by_corpus.withColumn('tf_corpus_norm', F.col('tf_corpus') / F.lit(corpus_total))
-borough_totals = by_borough.groupBy('borough_norm').agg(F.sum('tf_borough').alias('b_total'))
+# per-borough TF-IDF lift. on resume we read the cached fingerprint json
+# so the borough-callout block below still has data to print.
+if not PHASE_6_SKIP:
+    exploded = df_geo.select('borough_norm', F.explode('tokens').alias('term'))
+    by_borough = exploded.groupBy('borough_norm', 'term').count().withColumnRenamed('count', 'tf_borough')
+    by_corpus = exploded.groupBy('term').count().withColumnRenamed('count', 'tf_corpus')
+    corpus_total = by_corpus.agg(F.sum('tf_corpus')).collect()[0][0]
+    by_corpus = by_corpus.withColumn('tf_corpus_norm', F.col('tf_corpus') / F.lit(corpus_total))
+    borough_totals = by_borough.groupBy('borough_norm').agg(F.sum('tf_borough').alias('b_total'))
 
-lift_df = (
-    by_borough.join(by_corpus, on='term', how='left')
-    .join(borough_totals, on='borough_norm', how='left')
-    .withColumn('tf_borough_norm', F.col('tf_borough') / F.col('b_total'))
-    .withColumn('lift', F.col('tf_borough_norm') / F.col('tf_corpus_norm'))
-    .filter(F.col('tf_borough') >= 100)  # require >=100 occurrences so we dont surface typos
-)
+    lift_df = (
+        by_borough.join(by_corpus, on='term', how='left')
+        .join(borough_totals, on='borough_norm', how='left')
+        .withColumn('tf_borough_norm', F.col('tf_borough') / F.col('b_total'))
+        .withColumn('lift', F.col('tf_borough_norm') / F.col('tf_corpus_norm'))
+        .filter(F.col('tf_borough') >= 100)  # require >=100 occurrences so we dont surface typos
+    )
 
-lift_pdf = lift_df.select('borough_norm', 'term', 'tf_borough', 'lift').toPandas()
+    lift_pdf = lift_df.select('borough_norm', 'term', 'tf_borough', 'lift').toPandas()
 
-# top 5 distinctive terms per borough -> fingerprint cards
-fingerprints = {}
-for b, sub in lift_pdf.groupby('borough_norm'):
-    top = sub.nlargest(5, 'lift')
-    fingerprints[b] = [
-        (row['term'], float(row['lift']), int(row['tf_borough']))
-        for _, row in top.iterrows()
-    ]
+    # top 5 distinctive terms per borough -> fingerprint cards
+    fingerprints = {}
+    for b, sub in lift_pdf.groupby('borough_norm'):
+        top = sub.nlargest(5, 'lift')
+        fingerprints[b] = [
+            (row['term'], float(row['lift']), int(row['tf_borough']))
+            for _, row in top.iterrows()
+        ]
+else:
+    cached_fp = json.loads(Path(PHASE_6_FP).read_text())
+    fingerprints = {
+        b: [(item[0], float(item[1]), int(item[2])) for item in items[:5]]
+        for b, items in cached_fp.items()
+    }
+    print(f'loaded cached fingerprints for {len(fingerprints)} boroughs')
 
 # render fingerprint summary as plain text (one block per borough)
 borough_order = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']
@@ -1440,58 +1710,62 @@ print('*' * 78)
 """))
 
 cells.append(code("""
-# top 5 categories per borough
-cat_counts = (
-    df_geo.groupBy('borough_norm', 'label_canonical').count().toPandas()
-)
-top_cats_per_borough = {}
-for borough, sub in cat_counts.groupby('borough_norm'):
-    sub = sub.sort_values('count', ascending=False).head(5)
-    top_cats_per_borough[borough] = [
-        (row['label_canonical'], int(row['count']))
-        for _, row in sub.iterrows()
-    ]
-
-# save artifacts for the dashboard
+# top 5 categories per borough + final artifact write. on resume we keep the
+# cached jsons untouched (they are the source of truth).
 import datetime, json
-volume_dict = {
-    row['borough_norm']: {
-        'count': int(row['complaint_count']),
-        'top_categories': top_cats_per_borough[row['borough_norm']],
-    }
-    for _, row in volume.iterrows()
-}
-with open('/content/project/dashboard/assets/borough_volume.json', 'w') as f:
-    json.dump(volume_dict, f, indent=2, default=str)
-print('borough_volume.json saved')
 
-# fingerprints file uses up to top 15 distinctive terms
-fingerprints_full = {}
-for b, sub in lift_pdf.groupby('borough_norm'):
-    top = sub.nlargest(15, 'lift')
-    fingerprints_full[b] = [
-        (row['term'], round(float(row['lift']), 2), int(row['tf_borough']))
-        for _, row in top.iterrows()
-    ]
-with open('/content/project/dashboard/assets/borough_fingerprints.json', 'w') as f:
-    json.dump(fingerprints_full, f, indent=2, default=str)
-print('borough_fingerprints.json saved')
+if not PHASE_6_SKIP:
+    cat_counts = (
+        df_geo.groupBy('borough_norm', 'label_canonical').count().toPandas()
+    )
+    top_cats_per_borough = {}
+    for borough, sub in cat_counts.groupby('borough_norm'):
+        sub = sub.sort_values('count', ascending=False).head(5)
+        top_cats_per_borough[borough] = [
+            (row['label_canonical'], int(row['count']))
+            for _, row in sub.iterrows()
+        ]
 
-geo_summary = {
-    'phase': 6,
-    'computed_at': datetime.datetime.utcnow().isoformat() + 'Z',
-    'rows_aggregated': int(n_geo),
-    'aggregation_unit': 'borough',
-    'n_boroughs': len(fingerprints_full),
-    'volumes': [
-        {'borough': row['borough_norm'], 'count': int(row['complaint_count'])}
+    volume_dict = {
+        row['borough_norm']: {
+            'count': int(row['complaint_count']),
+            'top_categories': top_cats_per_borough[row['borough_norm']],
+        }
         for _, row in volume.iterrows()
-    ],
-    'note': 'pivoted from community-districts to boroughs because mzpm-a6vd dataset returns empty geometries currently',
-}
-with open('/content/project/dashboard/assets/geo_summary.json', 'w') as f:
-    json.dump(geo_summary, f, indent=2, default=str)
-print('geo_summary.json saved')
+    }
+    with open(PHASE_6_VOL, 'w') as f:
+        json.dump(volume_dict, f, indent=2, default=str)
+    print('borough_volume.json saved')
+
+    # fingerprints file uses up to top 15 distinctive terms
+    fingerprints_full = {}
+    for b, sub in lift_pdf.groupby('borough_norm'):
+        top = sub.nlargest(15, 'lift')
+        fingerprints_full[b] = [
+            (row['term'], round(float(row['lift']), 2), int(row['tf_borough']))
+            for _, row in top.iterrows()
+        ]
+    with open(PHASE_6_FP, 'w') as f:
+        json.dump(fingerprints_full, f, indent=2, default=str)
+    print('borough_fingerprints.json saved')
+
+    geo_summary = {
+        'phase': 6,
+        'computed_at': datetime.datetime.utcnow().isoformat() + 'Z',
+        'rows_aggregated': int(n_geo),
+        'aggregation_unit': 'borough',
+        'n_boroughs': len(fingerprints_full),
+        'volumes': [
+            {'borough': row['borough_norm'], 'count': int(row['complaint_count'])}
+            for _, row in volume.iterrows()
+        ],
+        'note': 'pivoted from community-districts to boroughs because mzpm-a6vd dataset returns empty geometries currently',
+    }
+    with open('/content/project/dashboard/assets/geo_summary.json', 'w') as f:
+        json.dump(geo_summary, f, indent=2, default=str)
+    print('geo_summary.json saved')
+else:
+    print(f'borough artifacts already on disk: {PHASE_6_VOL}, {PHASE_6_FP}')
 """))
 
 
@@ -1512,7 +1786,16 @@ The novelty phase. Phase 5's Word2Vec trained from scratch on our 1,187-word voc
 """))
 
 cells.append(code("""
-# install sentence-transformers if not already in deps (safe re-install)
+# phase 10 resume check - if bert_embeddings.parquet AND bert_cluster_summary.json
+# are both on disk, the encode + kmeans sweep already finished. skip the encoder
+# load, the GPU encode (the expensive part), and the kmeans sweep.
+PHASE_10_PARQUET = '/content/drive/MyDrive/cs6513/bert_embeddings.parquet'
+PHASE_10_JSON = '/content/project/dashboard/assets/bert_cluster_summary.json'
+PHASE_10_SKIP = all_exist(PHASE_10_PARQUET, PHASE_10_JSON)
+
+# install sentence-transformers if not already in deps (safe re-install).
+# we install even on resume because the kernel may have lost the import,
+# and the kmeans/silhouette logic still wants sklearn which is in the same env.
 !pip install sentence-transformers -q
 
 import torch
@@ -1520,58 +1803,92 @@ gpu_available = torch.cuda.is_available()
 gpu_name = torch.cuda.get_device_name(0) if gpu_available else 'none'
 section('GPU check')
 metric('GPU', 'available' if gpu_available else 'CPU only', gpu_name)
+
+if PHASE_10_SKIP:
+    print(f'phase 10 already complete: {PHASE_10_PARQUET} and {PHASE_10_JSON} exist')
+    print(f'skipping encode + kmeans -- artifacts already exist')
 """))
 
 cells.append(code("""
-# load preprocessed parquet directly via pandas (faster than spark for this size)
+# load preprocessed parquet directly via pandas (faster than spark for this size).
+# on resume we read df_sample + embeddings from the cached parquet and skip
+# the stratified-sampling step entirely.
 import pandas as pd
 import numpy as np
-from pathlib import Path
-
-in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
-df_b = pd.read_parquet(in_path, columns=['unique_key', 'label_canonical', 'problem_detail', 'tokens'])
-df_b = df_b[df_b['problem_detail'].notna() & (df_b['problem_detail'].str.len() >= 3)]
-
 from src.config import TOP_K_CATEGORIES
-top_classes_b = df_b['label_canonical'].value_counts().head(TOP_K_CATEGORIES).index.tolist()
-df_b = df_b[df_b['label_canonical'].isin(top_classes_b)]
 
-TARGET = 100_000
-frac = TARGET / len(df_b)
-df_sample = df_b.groupby('label_canonical', group_keys=False).apply(
-    lambda g: g.sample(frac=min(1.0, frac), random_state=42)
-).reset_index(drop=True)
-print(f'stratified sample size: {len(df_sample):,}')
+if not PHASE_10_SKIP:
+    in_path = '/content/drive/MyDrive/cs6513/sample_2m_preprocessed.parquet'
+    df_b = pd.read_parquet(in_path, columns=['unique_key', 'label_canonical', 'problem_detail', 'tokens'])
+    df_b = df_b[df_b['problem_detail'].notna() & (df_b['problem_detail'].str.len() >= 3)]
+
+    top_classes_b = df_b['label_canonical'].value_counts().head(TOP_K_CATEGORIES).index.tolist()
+    df_b = df_b[df_b['label_canonical'].isin(top_classes_b)]
+
+    TARGET = 100_000
+    frac = TARGET / len(df_b)
+    df_sample = df_b.groupby('label_canonical', group_keys=False).apply(
+        lambda g: g.sample(frac=min(1.0, frac), random_state=42)
+    ).reset_index(drop=True)
+    print(f'stratified sample size: {len(df_sample):,}')
+else:
+    # cached parquet has unique_key, label_canonical, problem_detail, bert_cluster, embedding
+    cached = pd.read_parquet(PHASE_10_PARQUET)
+    df_sample = cached[['unique_key', 'label_canonical', 'problem_detail']].copy()
+    print(f'loaded cached sample: {len(df_sample):,} rows')
 """))
 
 cells.append(code("""
-# load sentence-transformer and encode
+# load sentence-transformer and encode. on resume we hydrate embeddings from
+# the cached parquet and skip the encoder entirely. the encoder still has to
+# load if we want the probe-phrase retrieval cell to run, so we lazy-load it
+# only when we know we need it.
 from sentence_transformers import SentenceTransformer
 import time
 
 model_name = 'sentence-transformers/all-MiniLM-L6-v2'
-encoder = SentenceTransformer(model_name)
-if gpu_available:
-    encoder = encoder.to('cuda')
 
-texts = df_sample['problem_detail'].astype(str).tolist()
+if not PHASE_10_SKIP:
+    encoder = SentenceTransformer(model_name)
+    if gpu_available:
+        encoder = encoder.to('cuda')
 
-t0 = time.time()
-embeddings = encoder.encode(
-    texts,
-    batch_size=256,
-    show_progress_bar=True,
-    convert_to_numpy=True,
-    normalize_embeddings=True,
-)
-t_encode = time.time() - t0
-throughput = len(texts) / t_encode
+    texts = df_sample['problem_detail'].astype(str).tolist()
 
-print(f'\\nencoded {len(texts):,} docs in {t_encode:.1f} sec ({throughput:.0f} docs/sec)')
-print(f'embedding shape: {embeddings.shape}')
+    t0 = time.time()
+    embeddings = encoder.encode(
+        texts,
+        batch_size=256,
+        show_progress_bar=True,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    )
+    t_encode = time.time() - t0
+    throughput = len(texts) / t_encode
+
+    print(f'\\nencoded {len(texts):,} docs in {t_encode:.1f} sec ({throughput:.0f} docs/sec)')
+    print(f'embedding shape: {embeddings.shape}')
+
+    # mid-phase checkpoint: persist embeddings to drive BEFORE the kmeans sweep.
+    # encoding is the most expensive step in the phase (5-10 minutes on H100)
+    # so we never want to redo it just because the sweep silhouette OOMed.
+    print(f'saving embeddings checkpoint to {PHASE_10_PARQUET} (no cluster column yet)')
+    _ckpt_df = df_sample[['unique_key', 'label_canonical', 'problem_detail']].copy()
+    _ckpt_df['embedding'] = list(embeddings)
+    _ckpt_df['bert_cluster'] = -1  # placeholder - real value written after kmeans
+    _ckpt_df.to_parquet(PHASE_10_PARQUET)
+else:
+    # rehydrate from cached parquet
+    embeddings = np.stack(cached['embedding'].values)
+    t_encode = 0.0
+    throughput = 0.0
+    encoder = SentenceTransformer(model_name)  # still need it for probe-phrase encoding
+    if gpu_available:
+        encoder = encoder.to('cuda')
+    print(f'loaded {len(embeddings):,} cached embeddings (shape {embeddings.shape})')
 
 section('encoder metrics')
-metric('Throughput', f'{throughput:.0f}/sec', 'docs encoded per second')
+metric('Throughput', f'{throughput:.0f}/sec' if throughput else 'cached', 'docs encoded per second')
 metric('Embedding dim', f'{embeddings.shape[1]}', 'MiniLM output')
 metric('Memory', f'{embeddings.nbytes / 1024 / 1024:.0f} MB', 'in driver RAM')
 """))
@@ -1623,24 +1940,36 @@ print('*' * 78)
 """))
 
 cells.append(code("""
-# kmeans sweep on bert embeddings (sklearn for 100K-row driver-side speed)
+# kmeans sweep on bert embeddings (sklearn for 100K-row driver-side speed).
+# on resume we read best_k + sweep results from the cached summary json and
+# refit kmeans at best_k once to recover labels for the cluster-breakdown table.
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+import json
 
-ks_b = [5, 10, 15, 20, 25, 30]
-results_b = []
-for k in ks_b:
-    t0 = time.time()
-    km = KMeans(n_clusters=k, random_state=42, n_init=10, max_iter=20)
-    labels = km.fit_predict(embeddings)
-    t_fit_b = time.time() - t0
-    sample_idx = np.random.RandomState(42).choice(len(embeddings), size=min(20_000, len(embeddings)), replace=False)
-    score = silhouette_score(embeddings[sample_idx], labels[sample_idx])
-    results_b.append((k, float(score), float(t_fit_b), labels))
-    print(f'  k={k:>3}  silhouette={score:.4f}  fit_time={t_fit_b:.1f}s')
+if not PHASE_10_SKIP:
+    ks_b = [5, 10, 15, 20, 25, 30]
+    results_b = []
+    for k in ks_b:
+        t0 = time.time()
+        km = KMeans(n_clusters=k, random_state=42, n_init=10, max_iter=20)
+        labels = km.fit_predict(embeddings)
+        t_fit_b = time.time() - t0
+        sample_idx = np.random.RandomState(42).choice(len(embeddings), size=min(20_000, len(embeddings)), replace=False)
+        score = silhouette_score(embeddings[sample_idx], labels[sample_idx])
+        results_b.append((k, float(score), float(t_fit_b), labels))
+        print(f'  k={k:>3}  silhouette={score:.4f}  fit_time={t_fit_b:.1f}s')
 
-best_k_b, best_score_b, _, best_labels_b = max(results_b, key=lambda r: r[1])
-print(f'\\nbest k = {best_k_b} (silhouette = {best_score_b:.4f})')
+    best_k_b, best_score_b, _, best_labels_b = max(results_b, key=lambda r: r[1])
+    print(f'\\nbest k = {best_k_b} (silhouette = {best_score_b:.4f})')
+else:
+    cached_summary = json.loads(Path(PHASE_10_JSON).read_text())
+    best_k_b = int(cached_summary['best_k'])
+    best_score_b = float(cached_summary['best_silhouette'])
+    results_b = [(int(item['k']), float(item['silhouette']), 0.0, None) for item in cached_summary['kmeans_sweep']]
+    # pull best_labels_b from the cached parquet's bert_cluster column
+    best_labels_b = cached['bert_cluster'].astype(int).values
+    print(f'loaded cached sweep: best k = {best_k_b} (silhouette = {best_score_b:.4f})')
 """))
 
 cells.append(md("""
@@ -1707,14 +2036,18 @@ show_table(bert_cat_df)
 """))
 
 cells.append(code("""
-# save bert artifacts: embeddings parquet on drive (too big for git), summary json in repo
-out_path = '/content/drive/MyDrive/cs6513/bert_embeddings.parquet'
-out_df = df_sample[['unique_key', 'label_canonical', 'problem_detail', 'bert_cluster']].copy()
-out_df['embedding'] = list(embeddings)
-out_df.to_parquet(out_path)
-print(f'bert_embeddings.parquet saved to drive ({len(out_df):,} rows)')
-
+# save bert artifacts: update embeddings parquet (the mid-phase checkpoint had
+# a placeholder bert_cluster column) and write summary json.
 import datetime
+
+if not PHASE_10_SKIP:
+    out_df = df_sample[['unique_key', 'label_canonical', 'problem_detail', 'bert_cluster']].copy()
+    out_df['embedding'] = list(embeddings)
+    out_df.to_parquet(PHASE_10_PARQUET)
+    print(f'bert_embeddings.parquet saved to drive ({len(out_df):,} rows, real cluster labels)')
+else:
+    print(f'bert_embeddings.parquet already at {PHASE_10_PARQUET} (cached)')
+
 bert_summary = {
     'phase': 10,
     'computed_at': datetime.datetime.utcnow().isoformat() + 'Z',
@@ -1729,7 +2062,7 @@ bert_summary = {
     'word2vec_silhouette_at_same_k': float(p5_sweep.get(best_k_b, 0)) if p5_sweep else None,
     'bert_cluster_categories': {str(k): v for k, v in bert_cluster_categories.items()},
 }
-with open('/content/project/dashboard/assets/bert_cluster_summary.json', 'w') as f:
+with open(PHASE_10_JSON, 'w') as f:
     json.dump(bert_summary, f, indent=2, default=str)
 print('bert_cluster_summary.json saved')
 """))
