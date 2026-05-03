@@ -114,19 +114,12 @@ def render() -> None:
     selected = st.selectbox('Select a borough', boroughs)
 
     terms = fingerprints[selected]
-    # word cloud via wordcloud lib if available, else just a bar chart
-    try:
-        from wordcloud import WordCloud
-        import matplotlib.pyplot as plt
-        # weight word cloud by lift
-        freq = {t[0]: t[1] for t in terms}
-        wc = WordCloud(width=900, height=400, background_color='white',
-                       colormap='Purples').generate_from_frequencies(freq)
-        fig, ax = plt.subplots(figsize=(9, 4))
-        ax.imshow(wc, interpolation='bilinear')
-        ax.axis('off')
-        st.pyplot(fig)
-    except ImportError:
-        st.caption('wordcloud lib not available, falling back to bar chart')
-        chart = {'term': [t[0] for t in terms], 'lift': [t[1] for t in terms]}
-        st.bar_chart(chart, x='term', y='lift')
+    # bar chart of distinctive terms by lift - works on any deployment
+    # without depending on the wordcloud library which fails to compile
+    # on streamlit cloud
+    chart = {'term': [t[0] for t in terms], 'lift': [t[1] for t in terms]}
+    st.bar_chart(chart, x='term', y='lift', height=320)
+    st.caption(
+        f'Each bar shows how much more common that term is in {selected} '
+        'than in the corpus average. Higher lift = more distinctive of this borough.'
+    )

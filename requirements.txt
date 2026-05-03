@@ -1,27 +1,22 @@
 # minimal deps for the deployed streamlit dashboard.
-# heavy training-only deps (pyspark, sentence-transformers, etc) live in
-# requirements-train.txt and are only installed in colab.
+# heavy training-only deps (pyspark, sentence-transformers, gensim, etc)
+# live in requirements-train.txt and are only installed in colab.
+#
+# everything here is pure-python or has reliable wheels on streamlit cloud.
+# avoid gensim/wordcloud at deploy time - they need compilation and break.
 
-# core dashboard
 streamlit>=1.31
 pandas>=2.0
-numpy>=1.24
+numpy>=1.24,<2.0
 
 # plotting + maps
 plotly>=5.18
 matplotlib>=3.7
 folium>=0.15
 streamlit-folium>=0.18
-wordcloud>=1.9
 
 # pure-python ml inference (no spark needed at serve time)
 scikit-learn>=1.3
-
-# nlp helpers (small, stopwords only - we tokenize with regex in the app)
-nltk>=3.8
-
-# word2vec keyedvectors loading
-gensim>=4.3
 
 # api fetches for live pulse
 requests>=2.31

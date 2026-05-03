@@ -64,12 +64,17 @@ def load_regressor_npz():
 
 @st.cache_resource
 def load_word2vec_kv():
+    """gensim is optional at deploy time. if its not installed (default
+    for streamlit cloud), this returns None and tabs degrade gracefully."""
     p = _PORTABLE / 'word2vec.kv'
     if not p.exists():
         return None
     try:
         import gensim
         return gensim.models.KeyedVectors.load(str(p))
+    except ImportError:
+        # gensim not in deploy requirements - thats expected
+        return None
     except Exception:
         return None
 
