@@ -128,8 +128,11 @@ def fetch_soda_paginated(
                 print(f"  retry {attempt+1} after {wait}s: {e}")
                 time.sleep(wait)
 
-        # parse csv from response
-        chunk = pd.read_csv(io.StringIO(resp.text), low_memory=False)
+        # parse csv from response. dtype=str keeps every column as string so
+        # arrow doesnt try (and fail) to type-infer columns like community_board
+        # which look numeric except for '08'-style codes with leading zeros.
+        # spark normalize_columns casts datetime/double explicitly later.
+        chunk = pd.read_csv(io.StringIO(resp.text), low_memory=False, dtype=str)
         if len(chunk) == 0:
             print(f"  hit end of dataset at offset {offset}")
             break
@@ -172,6 +175,14 @@ def normalize_columns(df: DataFrame) -> DataFrame:
     )
 
 
+def _row_count_parquet(spark: SparkSession, path: str) -> int:
+    """count rows in a parquet path. returns 0 if path missing or empty."""
+    try:
+        return spark.read.parquet(path).count()
+    except Exception:
+        return 0
+
+
 def fetch_311_to_parquet(
     spark: SparkSession,
     endpoint: str,
@@ -180,31 +191,76 @@ def fetch_311_to_parquet(
     where: Optional[str] = None,
 ) -> int:
     """
-    convenience wrapper - pulls from soda, normalizes, writes parquet.
+    pull from soda, normalize, write parquet. crash-safe and idempotent.
+
+    behavior:
+      1. if `out_path` already has at least `target_rows` rows, skip everything.
+         re-running the cell after a successful pull is a no-op.
+      2. otherwise, look for a `.raw.parquet` checkpoint next to out_path. if
+         it exists with enough rows, skip the SODA pull and jump straight to
+         the spark normalize step. so a JVM crash during normalize doesnt
+         force a re-pull.
+      3. if no checkpoint, pull from SODA into pandas, write the raw pandas
+         straight to parquet via pyarrow (fast, memory-safe, no JVM involved).
+      4. spark reads that parquet (columnar, efficient), runs normalize, writes
+         the final parquet at out_path.
+
+    NOTE: previously this function called spark.createDataFrame(pdf) on the
+    pandas dataframe directly. on 5m+ rows in arrow-fallback mode that ships
+    rows one at a time through py4j and OOM-killed the 8 GB JVM. the new path
+    avoids createDataFrame entirely.
 
     Args:
         spark: the spark session.
         endpoint: SODA_2020_PLUS or SODA_2010_2019.
         target_rows: how many to pull.
-        out_path: where to write the parquet (drive path or local).
+        out_path: where to write the final normalized parquet.
         where: optional soql filter.
 
     Returns:
         the number of rows actually written.
     """
-    print(f"pulling {target_rows:,} rows from {endpoint}")
-    pdf = fetch_soda_paginated(endpoint, target_rows, where=where)
-    print(f"got {len(pdf):,} rows. converting to spark...")
+    out = Path(out_path)
+    raw = out.with_name(out.name.replace(".parquet", ".raw.parquet"))
+    out.parent.mkdir(parents=True, exist_ok=True)
 
-    # spark cant infer datetime cleanly from csv, so we let normalize_columns
-    # do the to_timestamp cast
-    sdf = spark.createDataFrame(pdf)
+    # step 1: already done? skip.
+    if out.exists():
+        existing = _row_count_parquet(spark, out_path)
+        if existing >= target_rows:
+            print(f"already have {existing:,} rows at {out_path}, skipping pull")
+            return existing
+        print(f"out_path has only {existing:,} rows, less than target {target_rows:,}; redoing")
+
+    # step 2: have raw checkpoint? skip the SODA pull.
+    have_checkpoint = False
+    if raw.exists():
+        raw_count = _row_count_parquet(spark, str(raw))
+        if raw_count >= target_rows:
+            print(f"raw checkpoint has {raw_count:,} rows at {raw}; skipping SODA pull")
+            have_checkpoint = True
+        else:
+            print(f"raw checkpoint exists but has only {raw_count:,} rows; will re-pull")
+
+    # step 3: pull from SODA + write raw checkpoint via pyarrow (no JVM)
+    if not have_checkpoint:
+        print(f"pulling {target_rows:,} rows from {endpoint}")
+        pdf = fetch_soda_paginated(endpoint, target_rows, where=where)
+        print(f"got {len(pdf):,} rows. checkpointing to {raw} (no spark conversion)")
+        # pandas to_parquet uses pyarrow under the hood. memory-stable and
+        # crash-safe - if the next step blows up, this checkpoint persists.
+        pdf.to_parquet(str(raw), index=False, engine="pyarrow")
+        del pdf  # free pandas memory before spark loads the parquet
+        print(f"raw checkpoint written")
+
+    # step 4: spark reads the raw parquet (columnar, no py4j row-by-row),
+    # normalizes columns, writes the final parquet
+    print(f"loading raw parquet into spark for normalization...")
+    sdf = spark.read.parquet(str(raw))
     sdf = normalize_columns(sdf)
-
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     sdf.write.mode("overwrite").parquet(out_path)
     n = sdf.count()
-    print(f"wrote {n:,} rows to {out_path}")
+    print(f"wrote {n:,} normalized rows to {out_path}")
     return n
 
 
