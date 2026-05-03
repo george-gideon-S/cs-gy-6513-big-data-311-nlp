@@ -1,6 +1,6 @@
 {
   "phase": 5,
-  "trained_at": "2026-05-03T13:16:06.691176Z",
+  "trained_at": "2026-05-03T15:00:02.748714Z",
   "n_docs": 6679021,
   "vocab_size": 1351,
   "word2vec": {
@@ -10,185 +10,89 @@
   },
   "kmeans": {
     "best_k": 30,
-    "silhouette": 0.4646809316110745
+    "silhouette": 0.4612360055291126
   },
   "sweep": [
     {
       "k": 5,
-      "silhouette": 0.23399783044510264
+      "silhouette": 0.2547962687456024
     },
     {
       "k": 10,
-      "silhouette": 0.2971269550924463
+      "silhouette": 0.33750243536384766
     },
     {
       "k": 15,
-      "silhouette": 0.3425914873520119
+      "silhouette": 0.37851159570417237
     },
     {
       "k": 20,
-      "silhouette": 0.3505949066617492
+      "silhouette": 0.37928932355294476
     },
     {
       "k": 25,
-      "silhouette": 0.4507704302812384
+      "silhouette": 0.3977627905737502
     },
     {
       "k": 30,
-      "silhouette": 0.4646809316110745
+      "silhouette": 0.4612360055291126
     }
   ],
   "cluster_top_terms": {
     "0": [
       [
-        "bus",
-        7907
+        "fallen",
+        112556
       ],
       [
-        "unauthorized",
-        4972
+        "branch",
+        111521
       ],
-      [
-        "layover",
-        4892
-      ],
-      [
-        "stop",
-        3015
-      ],
-      [
-        "shelter",
-        882
-      ],
-      [
-        "placement",
-        718
-      ],
-      [
-        "relocation",
-        164
-      ],
-      [
-        "climbing",
-        80
-      ]
-    ],
-    "1": [
       [
         "tree",
-        141950
+        99919
       ],
       [
         "dead",
-        71621
+        71514
       ],
       [
-        "fallen",
-        44840
+        "limb",
+        67716
+      ],
+      [
+        "blocking",
+        56887
+      ],
+      [
+        "parked",
+        56875
+      ],
+      [
+        "double",
+        56875
+      ],
+      [
+        "cracked",
+        49546
       ],
       [
         "entire",
         44833
-      ],
-      [
-        "animal",
-        44626
-      ],
-      [
-        "program",
-        32041
-      ],
-      [
-        "sidewalk",
-        31489
-      ],
-      [
-        "dying",
-        23998
-      ],
-      [
-        "leaning",
-        17532
-      ],
-      [
-        "uprooted",
-        14579
       ]
     ],
-    "2": [
+    "1": [
       [
-        "car",
-        159066
-      ],
-      [
-        "truck",
-        154711
+        "loud",
+        1094000
       ],
       [
         "music",
-        120443
+        1094000
       ],
       [
-        "horn",
-        31820
-      ],
-      [
-        "company",
-        4920
-      ],
-      [
-        "service",
-        3851
-      ],
-      [
-        "dealer",
-        1411
-      ],
-      [
-        "used",
-        1411
-      ],
-      [
-        "route",
-        1379
-      ],
-      [
-        "violation",
-        1379
-      ]
-    ],
-    "3": [
-      [
-        "loud",
-        144630
-      ],
-      [
-        "talking",
-        129692
-      ],
-      [
-        "scrie",
-        38065
-      ],
-      [
-        "failed",
-        37721
-      ],
-      [
-        "repair",
-        37721
-      ],
-      [
-        "assistance",
-        23393
-      ],
-      [
-        "television",
-        14938
-      ],
-      [
-        "recertification",
-        10113
+        "party",
+        1093765
       ],
       [
         "waive",
@@ -197,181 +101,29 @@
       [
         "late",
         9803
+      ],
+      [
+        "penalty",
+        9803
+      ],
+      [
+        "payment",
+        9803
+      ],
+      [
+        "date",
+        2364
+      ],
+      [
+        "day",
+        2129
+      ],
+      [
+        "within",
+        2129
       ]
     ],
-    "4": [
-      [
-        "plate",
-        111095
-      ],
-      [
-        "license",
-        106803
-      ],
-      [
-        "branch",
-        102873
-      ],
-      [
-        "fallen",
-        67826
-      ],
-      [
-        "limb",
-        67716
-      ],
-      [
-        "parked",
-        56902
-      ],
-      [
-        "double",
-        56875
-      ],
-      [
-        "blocking",
-        56875
-      ],
-      [
-        "cracked",
-        49546
-      ],
-      [
-        "traffic",
-        35146
-      ]
-    ],
-    "5": [
-      [
-        "parking",
-        182054
-      ],
-      [
-        "violation",
-        157559
-      ],
-      [
-        "sign",
-        125216
-      ],
-      [
-        "posted",
-        115459
-      ],
-      [
-        "commercial",
-        58106
-      ],
-      [
-        "overnight",
-        58086
-      ],
-      [
-        "rodent",
-        43463
-      ],
-      [
-        "condition",
-        34674
-      ],
-      [
-        "attracting",
-        26667
-      ],
-      [
-        "power",
-        24221
-      ]
-    ],
-    "6": [
-      [
-        "request",
-        63519
-      ],
-      [
-        "kit",
-        29741
-      ],
-      [
-        "lead",
-        28322
-      ],
-      [
-        "residential",
-        28192
-      ],
-      [
-        "litter",
-        20577
-      ],
-      [
-        "basket",
-        20401
-      ],
-      [
-        "lit",
-        9755
-      ],
-      [
-        "literature",
-        9755
-      ],
-      [
-        "clean",
-        9442
-      ],
-      [
-        "lot",
-        8968
-      ]
-    ],
-    "7": [
-      [
-        "gas",
-        50853
-      ],
-      [
-        "defective",
-        41779
-      ],
-      [
-        "electric",
-        33206
-      ],
-      [
-        "range",
-        33206
-      ],
-      [
-        "hardware",
-        24832
-      ],
-      [
-        "odor",
-        12432
-      ],
-      [
-        "chemical",
-        11413
-      ],
-      [
-        "boiler",
-        9014
-      ],
-      [
-        "inoperative",
-        9014
-      ],
-      [
-        "permit",
-        9014
-      ]
-    ],
-    "8": [
-      [
-        "bell",
-        22460
-      ],
+    "2": [
       [
         "intercom",
         22460
@@ -381,11 +133,15 @@
         22460
       ],
       [
-        "flow",
-        21214
+        "bell",
+        22460
       ],
       [
         "heavy",
+        21214
+      ],
+      [
+        "flow",
         21214
       ],
       [
@@ -409,255 +165,147 @@
         5495
       ]
     ],
-    "9": [
+    "3": [
       [
-        "light",
-        51504
+        "leak",
+        172389
       ],
       [
-        "cycling",
-        23592
+        "water",
+        110685
       ],
       [
-        "lamp",
-        20321
+        "comment",
+        44759
       ],
       [
-        "veh",
-        19172
+        "use",
+        44759
       ],
       [
-        "signal",
-        19163
+        "slow",
+        15812
       ],
       [
-        "multiple",
-        13124
+        "sewage",
+        913
       ],
       [
-        "head",
-        7516
+        "cko",
+        219
       ],
       [
-        "dayburning",
-        7273
+        "rooftank",
+        219
       ],
       [
-        "ped",
-        6148
+        "overflow",
+        219
       ],
       [
-        "flood",
-        2981
+        "natural",
+        1
       ]
     ],
-    "10": [
+    "4": [
       [
-        "store",
-        25258
+        "smoke",
+        17240
       ],
       [
-        "retail",
-        23206
+        "detector",
+        16997
       ],
       [
-        "food",
-        21505
+        "monoxide",
+        13663
       ],
       [
-        "fixture",
-        19201
-      ],
-      [
-        "luminaire",
-        19199
-      ],
-      [
-        "requested",
-        9329
-      ],
-      [
-        "door",
-        8003
-      ],
-      [
-        "open",
-        7763
-      ],
-      [
-        "license",
-        7080
-      ],
-      [
-        "service",
-        6424
-      ]
-    ],
-    "11": [
-      [
-        "noise",
-        178094
-      ],
-      [
-        "construction",
-        82384
-      ],
-      [
-        "hour",
-        47967
+        "carbon",
+        13663
       ],
       [
         "air",
-        43135
+        2247
       ],
       [
-        "idling",
-        41317
+        "vent",
+        1913
       ],
       [
-        "equipment",
-        35831
+        "chimney",
+        1913
       ],
       [
-        "dog",
-        33365
+        "vehicular",
+        334
       ],
       [
-        "engine",
-        30940
+        "fume",
+        292
       ],
       [
-        "supply",
-        28677
-      ],
-      [
-        "electric",
-        28677
+        "odor",
+        184
       ]
     ],
-    "12": [
+    "5": [
       [
-        "music",
-        1094000
+        "compliance",
+        61685
       ],
       [
-        "loud",
-        1094000
+        "business",
+        55131
       ],
       [
-        "party",
-        1093765
+        "bar",
+        6579
       ],
       [
-        "derelict",
-        90341
+        "restaurant",
+        6579
       ],
       [
-        "vehicle",
-        86505
+        "table",
+        253
       ],
       [
-        "bicycle",
-        3836
+        "reflected",
+        240
       ],
       [
-        "spill",
-        453
+        "finance",
+        240
       ],
       [
-        "petroleum",
-        453
+        "center",
+        240
       ],
       [
-        "gallon",
-        307
-      ],
-      [
-        "dishwashing",
-        294
+        "ready",
+        38
       ]
     ],
-    "13": [
-      [
-        "banging",
-        233704
-      ],
-      [
-        "pounding",
-        233704
-      ]
-    ],
-    "14": [
-      [
-        "recycling",
-        131046
-      ],
-      [
-        "decal",
-        75209
-      ],
-      [
-        "paper",
-        45780
-      ],
-      [
-        "missed",
-        42029
-      ],
-      [
-        "blue",
-        36414
-      ],
-      [
-        "green",
-        34849
-      ],
-      [
-        "mixed",
-        34824
-      ],
-      [
-        "garbage",
-        31658
-      ],
-      [
-        "checklist",
-        21032
-      ],
-      [
-        "material",
-        20654
-      ]
-    ],
-    "15": [
-      [
-        "social",
-        64117
-      ],
-      [
-        "distancing",
-        64117
-      ]
-    ],
-    "16": [
+    "6": [
       [
         "collection",
-        574343
+        574232
+      ],
+      [
+        "request",
+        512582
       ],
       [
         "large",
         491902
       ],
       [
-        "item",
-        491163
-      ],
-      [
-        "request",
-        491163
-      ],
-      [
         "bulky",
+        491163
+      ],
+      [
+        "item",
         491163
       ],
       [
@@ -669,63 +317,85 @@
         25279
       ],
       [
-        "recy",
-        7070
+        "ceramic",
+        16964
       ],
       [
-        "truck",
-        878
+        "tile",
+        16964
       ],
       [
-        "noise",
-        878
+        "litter",
+        10619
       ]
     ],
-    "17": [
+    "7": [
       [
-        "water",
-        112363
+        "wiring",
+        41341
       ],
       [
-        "dirty",
-        100885
+        "electric",
+        28330
       ],
       [
-        "supply",
-        51709
+        "electrical",
+        13011
       ],
+      [
+        "exposed",
+        13011
+      ],
+      [
+        "defective",
+        13011
+      ]
+    ],
+    "8": [
       [
         "sidewalk",
-        43951
-      ],
-      [
-        "area",
-        25495
-      ],
-      [
-        "alleyway",
-        23614
-      ],
-      [
-        "low",
-        11132
-      ],
-      [
-        "pressure",
-        11001
-      ],
-      [
-        "meter",
-        7499
+        135502
       ],
       [
         "broken",
-        7110
+        67104
+      ],
+      [
+        "none",
+        51318
+      ],
+      [
+        "tree",
+        34372
+      ],
+      [
+        "permit",
+        33117
+      ],
+      [
+        "program",
+        32838
+      ],
+      [
+        "inadequate",
+        26700
+      ],
+      [
+        "violation",
+        24377
+      ],
+      [
+        "curb",
+        22521
+      ],
+      [
+        "snow",
+        18076
       ]
     ],
-    "18": [
+    "9": [
       [
-        "planted",
+        "year",
         15579
       ],
       [
@@ -733,7 +403,7 @@
         15579
       ],
       [
-        "year",
+        "planted",
         15579
       ],
       [
@@ -742,14 +412,14 @@
       ],
       [
         "pole",
-        7973
-      ],
-      [
-        "gridlock",
-        7774
+        7841
       ],
       [
         "congestion",
+        7774
+      ],
+      [
+        "gridlock",
         7774
       ],
       [
@@ -765,159 +435,101 @@
         7546
       ]
     ],
-    "19": [
+    "10": [
       [
-        "access",
-        78443
-      ],
-      [
-        "partial",
-        77440
-      ],
-      [
-        "sighting",
-        73732
-      ],
-      [
-        "rat",
-        58849
-      ],
-      [
-        "mouse",
-        14883
-      ],
-      [
-        "area",
-        7289
-      ],
-      [
-        "prohibited",
-        7289
-      ],
-      [
-        "renewal",
-        4844
-      ],
-      [
-        "lease",
-        4844
-      ],
-      [
-        "question",
-        4844
-      ]
-    ],
-    "20": [
-      [
-        "structure",
-        20185
-      ],
-      [
-        "outdoors",
-        17317
-      ],
-      [
-        "indoors",
-        2829
-      ],
-      [
-        "srgdm",
-        39
-      ],
-      [
-        "railing",
-        39
-      ],
-      [
-        "damage",
-        39
-      ]
-    ],
-    "21": [
-      [
-        "leak",
-        172390
-      ],
-      [
-        "use",
-        172341
-      ],
-      [
-        "comment",
-        161012
-      ],
-      [
-        "water",
-        125575
-      ],
-      [
-        "basin",
-        120522
-      ],
-      [
-        "sewer",
-        67999
-      ],
-      [
-        "sink",
-        64174
-      ],
-      [
-        "backup",
-        59582
-      ],
-      [
-        "catch",
-        56359
-      ],
-      [
-        "flooding",
-        35969
-      ]
-    ],
-    "22": [
-      [
-        "sidewalk",
-        104025
-      ],
-      [
-        "broken",
-        54650
-      ],
-      [
-        "inadequate",
-        25947
-      ],
-      [
-        "curb",
-        25750
+        "parking",
+        182585
       ],
       [
         "violation",
-        24377
+        157559
       ],
       [
-        "none",
-        18175
+        "sign",
+        125121
       ],
       [
-        "snow",
-        17012
+        "posted",
+        115457
       ],
       [
-        "icy",
-        16868
+        "commercial",
+        52099
       ],
       [
-        "missing",
-        13302
+        "overnight",
+        52096
       ],
       [
-        "defective",
-        12122
+        "light",
+        51504
+      ],
+      [
+        "scrie",
+        38065
+      ],
+      [
+        "card",
+        29383
+      ],
+      [
+        "payment",
+        28855
       ]
     ],
-    "23": [
+    "11": [
+      [
+        "pounding",
+        233704
+      ],
+      [
+        "banging",
+        233704
+      ]
+    ],
+    "12": [
+      [
+        "plate",
+        110778
+      ],
+      [
+        "license",
+        108867
+      ],
+      [
+        "condition",
+        12431
+      ],
+      [
+        "noisy",
+        8787
+      ],
+      [
+        "vendor",
+        6964
+      ],
+      [
+        "food",
+        6391
+      ],
+      [
+        "mobile",
+        3923
+      ],
+      [
+        "term",
+        2937
+      ],
+      [
+        "full",
+        2937
+      ],
+      [
+        "shifted",
+        2743
+      ]
+    ],
+    "13": [
       [
         "cond",
         99361
@@ -931,102 +543,326 @@
         84203
       ],
       [
-        "elevator",
-        39923
+        "ice",
+        16952
       ],
       [
-        "payment",
-        28855
+        "snow",
+        16952
       ],
       [
-        "card",
-        28554
+        "plow",
+        14797
+      ],
+      [
+        "spread",
+        14797
+      ],
+      [
+        "tear",
+        6200
+      ],
+      [
+        "wear",
+        6200
+      ],
+      [
+        "door",
+        329
+      ]
+    ],
+    "14": [
+      [
+        "dirty",
+        100885
+      ],
+      [
+        "sidewalk",
+        43951
+      ],
+      [
+        "area",
+        32828
+      ],
+      [
+        "water",
+        32172
+      ],
+      [
+        "alleyway",
+        23614
+      ],
+      [
+        "prohibited",
+        7389
+      ],
+      [
+        "reflected",
+        2458
+      ],
+      [
+        "mailed",
+        2457
+      ],
+      [
+        "detached",
+        2037
+      ],
+      [
+        "trailer",
+        2037
+      ]
+    ],
+    "15": [
+      [
+        "noise",
+        14362
+      ],
+      [
+        "people",
+        14362
+      ],
+      [
+        "created",
+        14362
+      ]
+    ],
+    "16": [
+      [
+        "hydrant",
+        152288
+      ],
+      [
+        "defective",
+        75344
+      ],
+      [
+        "running",
+        73475
+      ],
+      [
+        "emergency",
+        44481
+      ],
+      [
+        "gas",
+        43824
+      ],
+      [
+        "full",
+        41312
+      ],
+      [
+        "fire",
+        37390
+      ],
+      [
+        "fhe",
+        37180
+      ],
+      [
+        "electric",
+        33206
+      ],
+      [
+        "range",
+        33206
+      ]
+    ],
+    "17": [
+      [
+        "noise",
+        144609
+      ],
+      [
+        "construction",
+        82516
+      ],
+      [
+        "hour",
+        44590
+      ],
+      [
+        "equipment",
+        35950
+      ],
+      [
+        "dog",
+        32322
+      ],
+      [
+        "air",
+        25170
+      ],
+      [
+        "barking",
+        24445
+      ],
+      [
+        "ventilation",
+        22387
+      ],
+      [
+        "condition",
+        17520
+      ],
+      [
+        "alarm",
+        10301
+      ]
+    ],
+    "18": [
+      [
+        "sighting",
+        74475
+      ],
+      [
+        "rat",
+        58849
+      ],
+      [
+        "led",
+        19859
+      ],
+      [
+        "mouse",
+        15481
       ],
       [
         "pedestrian",
-        28021
+        13352
       ],
       [
-        "property",
-        25837
+        "unit",
+        13352
       ],
       [
-        "received",
-        23363
+        "order",
+        9137
       ],
       [
-        "device",
-        22630
+        "contrary",
+        7413
+      ],
+      [
+        "exchange",
+        6900
+      ],
+      [
+        "refund",
+        6900
       ]
     ],
-    "24": [
+    "19": [
+      [
+        "loud",
+        144630
+      ],
+      [
+        "talking",
+        129692
+      ],
+      [
+        "television",
+        14938
+      ],
+      [
+        "weed",
+        4784
+      ],
+      [
+        "grass",
+        4784
+      ]
+    ],
+    "20": [
       [
         "illegal",
-        167960
+        155261
+      ],
+      [
+        "recycling",
+        131061
+      ],
+      [
+        "use",
+        118932
+      ],
+      [
+        "vehicle",
+        110658
       ],
       [
         "residential",
-        68737
+        96929
+      ],
+      [
+        "derelict",
+        86505
+      ],
+      [
+        "comment",
+        78362
+      ],
+      [
+        "decal",
+        75209
+      ],
+      [
+        "sewer",
+        70214
       ],
       [
         "space",
         65241
+      ]
+    ],
+    "21": [
+      [
+        "basin",
+        121440
       ],
       [
-        "conversion",
-        64802
+        "sink",
+        65303
       ],
       [
-        "permit",
-        54563
-      ],
-      [
-        "improper",
-        35183
-      ],
-      [
-        "none",
-        33117
+        "catch",
+        56341
       ],
       [
         "use",
-        31328
+        37910
       ],
       [
-        "window",
-        29727
+        "comment",
+        37909
       ],
       [
-        "work",
-        29672
+        "flooding",
+        35969
+      ],
+      [
+        "clogged",
+        34876
+      ],
+      [
+        "open",
+        32479
+      ],
+      [
+        "damaged",
+        28228
+      ],
+      [
+        "door",
+        28048
       ]
     ],
-    "25": [
-      [
-        "wiring",
-        41341
-      ],
-      [
-        "electric",
-        28330
-      ],
-      [
-        "exposed",
-        13011
-      ],
-      [
-        "electrical",
-        13011
-      ],
-      [
-        "defective",
-        13011
-      ]
-    ],
-    "26": [
+    "22": [
       [
         "blocked",
-        254630
+        256883
       ],
       [
         "hydrant",
@@ -1037,126 +873,50 @@
         70727
       ],
       [
+        "window",
+        29727
+      ],
+      [
+        "frame",
+        27493
+      ],
+      [
         "bike",
-        16787
+        16210
       ],
       [
         "lane",
-        16201
+        16192
+      ],
+      [
+        "door",
+        16107
       ],
       [
         "construction",
         14417
       ],
       [
-        "egress",
-        9399
-      ],
-      [
-        "improper",
-        9399
-      ],
-      [
-        "locked",
-        9399
-      ],
-      [
         "secondary",
         9399
       ]
     ],
-    "27": [
+    "23": [
       [
-        "compliance",
-        61685
+        "car",
+        159066
       ],
       [
-        "business",
-        60023
+        "truck",
+        154809
       ],
       [
-        "restaurant",
-        6579
+        "music",
+        120443
       ],
       [
-        "bar",
-        6579
-      ],
-      [
-        "allowed",
-        4885
-      ],
-      [
-        "open",
-        4885
-      ],
-      [
-        "table",
-        253
-      ],
-      [
-        "center",
-        240
-      ],
-      [
-        "finance",
-        240
-      ],
-      [
-        "reflected",
-        240
-      ]
-    ],
-    "28": [
-      [
-        "hydrant",
-        144054
-      ],
-      [
-        "running",
-        73475
-      ],
-      [
-        "full",
-        39970
-      ],
-      [
-        "emergency",
-        39052
-      ],
-      [
-        "fire",
-        37232
-      ],
-      [
-        "fhe",
-        37180
-      ],
-      [
-        "leaking",
-        16078
-      ],
-      [
-        "defective",
-        11035
-      ],
-      [
-        "knocked",
-        9064
-      ],
-      [
-        "remove",
-        6991
-      ]
-    ],
-    "29": [
-      [
-        "ceramic",
-        16964
-      ],
-      [
-        "tile",
-        16964
+        "horn",
+        32908
       ],
       [
         "super",
@@ -1167,233 +927,210 @@
         8579
       ],
       [
-        "racing",
-        4335
+        "requested",
+        5914
       ],
       [
-        "drag",
-        4335
+        "report",
+        4979
       ],
       [
-        "digest",
-        4136
+        "company",
+        4920
       ],
       [
-        "code",
-        4136
+        "police",
+        4826
+      ]
+    ],
+    "24": [
+      [
+        "supply",
+        80386
       ],
       [
-        "chinese",
-        2
+        "water",
+        75806
+      ],
+      [
+        "electric",
+        28677
+      ],
+      [
+        "billing",
+        21384
+      ],
+      [
+        "incorrect",
+        21282
+      ],
+      [
+        "failure",
+        19908
+      ],
+      [
+        "maintain",
+        13661
+      ],
+      [
+        "low",
+        11132
+      ],
+      [
+        "pressure",
+        11001
+      ],
+      [
+        "drainage",
+        6183
+      ]
+    ],
+    "25": [
+      [
+        "noise",
+        14359
+      ],
+      [
+        "jack",
+        14359
+      ],
+      [
+        "hammering",
+        14359
+      ],
+      [
+        "hour",
+        3377
+      ],
+      [
+        "licensed",
+        2628
+      ],
+      [
+        "est",
+        2628
+      ],
+      [
+        "operation",
+        2503
+      ],
+      [
+        "underage",
+        1754
+      ],
+      [
+        "biking",
+        440
+      ],
+      [
+        "path",
+        440
+      ]
+    ],
+    "26": [
+      [
+        "access",
+        77447
+      ],
+      [
+        "partial",
+        77440
+      ],
+      [
+        "minor",
+        7
+      ]
+    ],
+    "27": [
+      [
+        "store",
+        25255
+      ],
+      [
+        "litter",
+        24397
+      ],
+      [
+        "power",
+        24221
+      ],
+      [
+        "line",
+        23208
+      ],
+      [
+        "retail",
+        23122
+      ],
+      [
+        "phone",
+        17111
+      ],
+      [
+        "surveillance",
+        15862
+      ],
+      [
+        "hitting",
+        15857
+      ],
+      [
+        "falling",
+        12951
+      ],
+      [
+        "garbage",
+        12036
+      ]
+    ],
+    "28": [
+      [
+        "repair",
+        38067
+      ],
+      [
+        "failed",
+        37721
+      ],
+      [
+        "rack",
+        346
+      ],
+      [
+        "bike",
+        346
+      ]
+    ],
+    "29": [
+      [
+        "distancing",
+        64117
+      ],
+      [
+        "social",
+        64117
       ]
     ]
   },
   "cluster_categories": {
     "0": [
       [
-        "Illegal Parking",
-        4695,
-        72.9
-      ],
-      [
-        "Bus Stop Shelter Placement",
-        882,
-        13.7
-      ],
-      [
-        "Street Sign - Missing",
-        863,
-        13.4
-      ]
-    ],
-    "1": [
-      [
         "Damaged Tree",
-        69711,
-        51.8
-      ],
-      [
-        "Sanitation Condition",
-        33482,
-        24.9
-      ],
-      [
-        "Root/Sewer/Sidewalk Condition",
-        31489,
-        23.4
-      ]
-    ],
-    "2": [
-      [
-        "Noise - Vehicle",
-        144164,
-        92.3
-      ],
-      [
-        "Noise - Commercial",
-        8099,
-        5.2
-      ],
-      [
-        "Consumer Complaint",
-        3983,
-        2.5
-      ]
-    ],
-    "3": [
-      [
-        "Noise - Street/Sidewalk",
-        66249,
-        39.6
-      ],
-      [
-        "Noise - Residential",
-        63140,
-        37.7
-      ],
-      [
-        "SCRIE",
-        38065,
-        22.7
-      ]
-    ],
-    "4": [
-      [
-        "Damaged Tree",
-        99826,
-        45.6
-      ],
-      [
-        "Abandoned Vehicle",
-        64752,
-        29.6
+        161878,
+        64.8
       ],
       [
         "Illegal Parking",
         54413,
-        24.8
+        21.8
+      ],
+      [
+        "Sanitation Condition",
+        33482,
+        13.4
       ]
     ],
-    "5": [
-      [
-        "Illegal Parking",
-        166145,
-        76.9
-      ],
-      [
-        "Rodent",
-        33925,
-        15.7
-      ],
-      [
-        "Overgrown Tree/Branches",
-        15857,
-        7.3
-      ]
-    ],
-    "6": [
-      [
-        "Lead",
-        28192,
-        55.4
-      ],
-      [
-        "Literature Request",
-        12048,
-        23.7
-      ],
-      [
-        "Litter Basket / Request",
-        10619,
-        20.9
-      ]
-    ],
-    "7": [
-      [
-        "APPLIANCE",
-        33206,
-        46.0
-      ],
-      [
-        "Street Condition",
-        29913,
-        41.5
-      ],
-      [
-        "Boilers",
-        9014,
-        12.5
-      ]
-    ],
-    "8": [
-      [
-        "WATER LEAK",
-        26709,
-        49.9
-      ],
-      [
-        "ELECTRIC",
-        13907,
-        26.0
-      ],
-      [
-        "General Construction",
-        12885,
-        24.1
-      ]
-    ],
-    "9": [
-      [
-        "Street Light Condition",
-        48491,
-        62.2
-      ],
-      [
-        "Traffic Signal Condition",
-        26950,
-        34.6
-      ],
-      [
-        "Overgrown Tree/Branches",
-        2498,
-        3.2
-      ]
-    ],
-    "10": [
-      [
-        "Consumer Complaint",
-        35374,
-        51.0
-      ],
-      [
-        "Street Light Condition",
-        20309,
-        29.3
-      ],
-      [
-        "Food Establishment",
-        13651,
-        19.7
-      ]
-    ],
-    "11": [
-      [
-        "Noise",
-        152090,
-        72.0
-      ],
-      [
-        "Noise - Vehicle",
-        30344,
-        14.4
-      ],
-      [
-        "ELECTRIC",
-        28677,
-        13.6
-      ]
-    ],
-    "12": [
+    "1": [
       [
         "Noise - Residential",
         658777,
@@ -1410,87 +1147,121 @@
         9.0
       ]
     ],
-    "13": [
+    "2": [
       [
-        "Noise - Residential",
-        223433,
-        95.6
+        "WATER LEAK",
+        26709,
+        49.9
       ],
       [
-        "Noise - Commercial",
-        9818,
-        4.2
+        "ELECTRIC",
+        13907,
+        26.0
       ],
       [
-        "Noise - House of Worship",
-        453,
-        0.2
+        "General Construction",
+        12885,
+        24.1
       ]
     ],
-    "14": [
+    "3": [
       [
-        "Literature Request",
-        106852,
-        64.4
+        "Plumbing",
+        110685,
+        64.6
       ],
       [
-        "Missed Collection",
-        39369,
-        23.7
+        "Water System",
+        44759,
+        26.1
       ],
       [
-        "Unsanitary Condition",
-        19622,
-        11.8
+        "WATER LEAK",
+        15812,
+        9.2
       ]
     ],
-    "15": [
+    "4": [
       [
-        "Non-Emergency Police Matter",
-        59998,
-        93.6
+        "NONCONST",
+        22537,
+        74.1
       ],
       [
-        "Violation of Park Rules",
-        4119,
-        6.4
+        "SAFETY",
+        5621,
+        18.5
+      ],
+      [
+        "Air Quality",
+        2247,
+        7.4
       ]
     ],
-    "16": [
+    "5": [
+      [
+        "NonCompliance with Phased Reopening",
+        61432,
+        99.2
+      ],
+      [
+        "Outdoor Dining",
+        253,
+        0.4
+      ],
+      [
+        "DOF Parking - Payment Issue",
+        240,
+        0.4
+      ]
+    ],
+    "6": [
       [
         "Bulky Item Collection",
         491163,
-        85.6
+        83.2
       ],
       [
         "Missed Collection",
         81952,
-        14.3
+        13.9
       ],
       [
-        "Collection Truck Noise",
-        878,
-        0.2
+        "General Construction",
+        16964,
+        2.9
       ]
     ],
-    "17": [
+    "7": [
       [
-        "Dirty Conditions",
-        67565,
-        39.3
+        "ELECTRIC",
+        28330,
+        68.5
       ],
       [
-        "Plumbing",
-        57815,
-        33.6
-      ],
-      [
-        "Water System",
-        46525,
-        27.1
+        "Electrical",
+        13011,
+        31.5
       ]
     ],
-    "18": [
+    "8": [
+      [
+        "Sidewalk Condition",
+        64780,
+        41.2
+      ],
+      [
+        "General Construction",
+        57794,
+        36.7
+      ],
+      [
+        "Root/Sewer/Sidewalk Condition",
+        34722,
+        22.1
+      ]
+    ],
+    "9": [
       [
         "Dead/Dying Tree",
         15579,
@@ -1507,186 +1278,324 @@
         22.8
       ]
     ],
-    "19": [
+    "10": [
       [
-        "Blocked Driveway",
-        77440,
-        48.9
+        "Illegal Parking",
+        160591,
+        64.3
       ],
       [
-        "Rodent",
-        73732,
-        46.5
+        "Street Light Condition",
+        50924,
+        20.4
+      ],
+      [
+        "SCRIE",
+        38065,
+        15.3
+      ]
+    ],
+    "11": [
+      [
+        "Noise - Residential",
+        223433,
+        95.6
+      ],
+      [
+        "Noise - Commercial",
+        9818,
+        4.2
+      ],
+      [
+        "Noise - House of Worship",
+        453,
+        0.2
+      ]
+    ],
+    "12": [
+      [
+        "Abandoned Vehicle",
+        64752,
+        58.8
+      ],
+      [
+        "Derelict Vehicle",
+        32887,
+        29.9
+      ],
+      [
+        "Street Condition",
+        12428,
+        11.3
+      ]
+    ],
+    "13": [
+      [
+        "Sanitation Condition",
+        84532,
+        80.1
+      ],
+      [
+        "Snow",
+        14829,
+        14.0
+      ],
+      [
+        "Street Condition",
+        6200,
+        5.9
+      ]
+    ],
+    "14": [
+      [
+        "Dirty Conditions",
+        67565,
+        63.1
+      ],
+      [
+        "Water System",
+        32172,
+        30.1
       ],
       [
         "Vending",
         7289,
-        4.6
+        6.8
+      ]
+    ],
+    "15": [
+      [
+        "Noise Survey",
+        14362,
+        100.0
+      ]
+    ],
+    "16": [
+      [
+        "Water System",
+        150753,
+        72.5
+      ],
+      [
+        "APPLIANCE",
+        33206,
+        16.0
+      ],
+      [
+        "Street Condition",
+        24011,
+        11.5
+      ]
+    ],
+    "17": [
+      [
+        "Noise",
+        138318,
+        92.2
+      ],
+      [
+        "Air Quality",
+        7650,
+        5.1
+      ],
+      [
+        "Unleashed Dog",
+        4012,
+        2.7
+      ]
+    ],
+    "18": [
+      [
+        "Rodent",
+        73732,
+        69.2
+      ],
+      [
+        "Traffic Signal Condition",
+        20425,
+        19.2
+      ],
+      [
+        "General Construction",
+        12449,
+        11.7
+      ]
+    ],
+    "19": [
+      [
+        "Noise - Street/Sidewalk",
+        66249,
+        47.2
+      ],
+      [
+        "Noise - Residential",
+        63140,
+        45.0
+      ],
+      [
+        "Noise - Commercial",
+        11050,
+        7.9
       ]
     ],
     "20": [
       [
-        "Maintenance or Facility",
-        20146,
-        99.8
+        "Literature Request",
+        117142,
+        38.7
       ],
       [
-        "Sewer",
-        39,
-        0.2
+        "Building/Use",
+        99424,
+        32.8
+      ],
+      [
+        "Derelict Vehicles",
+        86505,
+        28.5
       ]
     ],
     "21": [
       [
         "Plumbing",
-        174848,
-        48.8
+        64163,
+        41.4
       ],
       [
         "Sewer",
-        125240,
-        35.0
+        58589,
+        37.8
       ],
       [
-        "Water System",
-        58017,
-        16.2
+        "Street Light Condition",
+        32380,
+        20.9
       ]
     ],
     "22": [
       [
-        "Sidewalk Condition",
-        68009,
-        62.1
+        "Illegal Parking",
+        219150,
+        85.2
+      ],
+      [
+        "DOOR/WINDOW",
+        22913,
+        8.9
       ],
       [
         "General Construction",
-        24677,
-        22.5
-      ],
-      [
-        "Snow",
-        16868,
-        15.4
+        15169,
+        5.9
       ]
     ],
     "23": [
       [
-        "Sanitation Condition",
-        84532,
-        53.3
+        "Noise - Vehicle",
+        144164,
+        91.1
       ],
       [
-        "Elevator",
-        39923,
-        25.2
-      ],
-      [
-        "Traffic Signal Condition",
-        34089,
-        21.5
-      ]
-    ],
-    "24": [
-      [
-        "Building/Use",
-        99424,
-        48.0
-      ],
-      [
-        "Dirty Conditions",
-        56831,
-        27.5
-      ],
-      [
-        "General Construction",
-        50713,
-        24.5
-      ]
-    ],
-    "25": [
-      [
-        "ELECTRIC",
-        28330,
-        68.5
-      ],
-      [
-        "Electrical",
-        13011,
-        31.5
-      ]
-    ],
-    "26": [
-      [
-        "Illegal Parking",
-        219150,
-        92.6
-      ],
-      [
-        "General Construction",
-        9399,
-        4.0
-      ],
-      [
-        "Street Condition",
-        8168,
-        3.5
-      ]
-    ],
-    "27": [
-      [
-        "NonCompliance with Phased Reopening",
-        66317,
-        99.3
-      ],
-      [
-        "Outdoor Dining",
-        253,
-        0.4
-      ],
-      [
-        "DOF Parking - Payment Issue",
-        240,
-        0.4
-      ]
-    ],
-    "28": [
-      [
-        "Water System",
-        144033,
-        93.9
-      ],
-      [
-        "DOF Property - Owner Issue",
-        6340,
-        4.1
-      ],
-      [
-        "Street Light Condition",
-        3049,
-        2.0
-      ]
-    ],
-    "29": [
-      [
-        "General Construction",
-        16964,
-        62.3
+        "Noise - Commercial",
+        8099,
+        5.1
       ],
       [
         "NONCONST",
         5992,
-        22.0
+        3.8
+      ]
+    ],
+    "24": [
+      [
+        "Plumbing",
+        57815,
+        53.7
       ],
       [
-        "Traffic",
-        4273,
-        15.7
+        "ELECTRIC",
+        28677,
+        26.6
+      ],
+      [
+        "DOF Property - Owner Issue",
+        21240,
+        19.7
+      ]
+    ],
+    "25": [
+      [
+        "Noise",
+        14359,
+        73.7
+      ],
+      [
+        "Drinking",
+        2628,
+        13.5
+      ],
+      [
+        "Maintenance or Facility",
+        2503,
+        12.8
+      ]
+    ],
+    "26": [
+      [
+        "Blocked Driveway",
+        77440,
+        100.0
+      ],
+      [
+        "Consumer Complaint",
+        7,
+        0.0
+      ]
+    ],
+    "27": [
+      [
+        "Consumer Complaint",
+        25881,
+        44.9
+      ],
+      [
+        "Dirty Conditions",
+        15862,
+        27.5
+      ],
+      [
+        "Overgrown Tree/Branches",
+        15857,
+        27.5
+      ]
+    ],
+    "28": [
+      [
+        "Street Condition",
+        37721,
+        99.1
+      ],
+      [
+        "Bike Rack Condition",
+        346,
+        0.9
+      ]
+    ],
+    "29": [
+      [
+        "Non-Emergency Police Matter",
+        59998,
+        93.6
+      ],
+      [
+        "Violation of Park Rules",
+        4119,
+        6.4
       ]
     ]
   },
   "training_time_sec": {
-    "word2vec": 100.44228982925415
+    "word2vec": 144.47029066085815
   },
-  "urban_decay_cluster": 24
+  "urban_decay_cluster": 20
 }

@@ -1,11 +1,11 @@
 {
   "phase": 10,
-  "computed_at": "2026-05-03T13:18:21.506733Z",
+  "computed_at": "2026-05-03T15:00:35.675016Z",
   "model": "sentence-transformers/all-MiniLM-L6-v2",
   "n_encoded": 100000,
   "embedding_dim": 384,
-  "encoding_time_sec": 4.138911485671997,
-  "throughput_docs_per_sec": 24160.941915810003,
+  "encoding_time_sec": 0.0,
+  "throughput_docs_per_sec": 0.0,
   "kmeans_sweep": [
     {
       "k": 5,
@@ -34,7 +34,7 @@
   ],
   "best_k": 30,
   "best_silhouette": 0.6647352576255798,
-  "word2vec_silhouette_at_same_k": 0.4646809316110745,
+  "word2vec_silhouette_at_same_k": 0.4612360055291126,
   "bert_cluster_categories": {
     "0": [
       [
