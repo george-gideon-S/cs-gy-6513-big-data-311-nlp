@@ -170,6 +170,16 @@ def get_spark(app_name: str = "cs6513-311-nlp", local_cores: str = "*") -> Spark
         .config("spark.ui.showConsoleProgress", "false")
         # make sure executors inherit our PYTHONPATH so they can find src/
         .config("spark.executorEnv.PYTHONPATH", str(project_root))
+        # parquet timestamp rebasing for ancient dates. some 311 rows have
+        # closed_date/created_date before 1900-01-01 (data quality artifacts).
+        # spark 3.0+ refuses to write these to parquet INT96 without explicit
+        # rebase config. CORRECTED keeps proleptic-gregorian semantics (the
+        # right thing for modern readers); LEGACY would rebase to old hybrid
+        # calendar for spark-2.x interop, which we dont need.
+        .config("spark.sql.parquet.int96RebaseModeInWrite", "CORRECTED")
+        .config("spark.sql.parquet.int96RebaseModeInRead", "CORRECTED")
+        .config("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
+        .config("spark.sql.parquet.datetimeRebaseModeInRead", "CORRECTED")
     )
 
     spark = builder.getOrCreate()
