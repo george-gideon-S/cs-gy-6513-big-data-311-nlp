@@ -1,0 +1,127 @@
+{
+  "Brooklyn": {
+    "count": 478077,
+    "top_categories": [
+      [
+        "Noise - Residential",
+        51838
+      ],
+      [
+        "Bulky Item Collection",
+        35723
+      ],
+      [
+        "Street Condition",
+        24407
+      ],
+      [
+        "Illegal Parking",
+        23673
+      ],
+      [
+        "Blocked Driveway",
+        22478
+      ]
+    ]
+  },
+  "Queens": {
+    "count": 424385,
+    "top_categories": [
+      [
+        "Bulky Item Collection",
+        35544
+      ],
+      [
+        "Noise - Residential",
+        34886
+      ],
+      [
+        "Street Condition",
+        27531
+      ],
+      [
+        "Street Light Condition",
+        25935
+      ],
+      [
+        "Blocked Driveway",
+        24973
+      ]
+    ]
+  },
+  "Manhattan": {
+    "count": 308039,
+    "top_categories": [
+      [
+        "Noise - Residential",
+        42060
+      ],
+      [
+        "Noise - Street/Sidewalk",
+        18938
+      ],
+      [
+        "Non-Emergency Police Matter",
+        16245
+      ],
+      [
+        "Street Condition",
+        15693
+      ],
+      [
+        "Noise",
+        15497
+      ]
+    ]
+  },
+  "Bronx": {
+    "count": 277051,
+    "top_categories": [
+      [
+        "Noise - Residential",
+        58861
+      ],
+      [
+        "Heat/Hot Water",
+        20030
+      ],
+      [
+        "Street Light Condition",
+        16403
+      ],
+      [
+        "Noise - Street/Sidewalk",
+        11799
+      ],
+      [
+        "Street Condition",
+        11317
+      ]
+    ]
+  },
+  "Staten Island": {
+    "count": 101713,
+    "top_categories": [
+      [
+        "Street Condition",
+        11512
+      ],
+      [
+        "Bulky Item Collection",
+        9463
+      ],
+      [
+        "Street Light Condition",
+        6084
+      ],
+      [
+        "Noise - Residential",
+        5205
+      ],
+      [
+        "Missed Collection",
+        4108
+      ]
+    ]
+  }
+}
