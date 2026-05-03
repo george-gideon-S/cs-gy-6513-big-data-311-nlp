@@ -60,20 +60,17 @@ cells: list = []
 # =====================================================================
 
 cells.append(md("""
-<div style="background:linear-gradient(135deg,#57068C 0%,#7F2CCB 100%);color:white;padding:48px 32px;border-radius:8px;margin-bottom:24px;">
-<div style="font-size:14px;letter-spacing:0.2em;text-transform:uppercase;opacity:0.85;">CSGY-6513 Big Data, Section D, Term 2</div>
-<h1 style="font-size:38px;font-weight:600;margin:8px 0 4px 0;line-height:1.2;">The Language of Complaints</h1>
-<div style="font-size:20px;font-weight:300;opacity:0.95;">NLP-Powered NYC 311 Service Request Triage and Resolution Time Prediction</div>
-<div style="margin-top:24px;font-size:13px;opacity:0.85;">Final Project Notebook -- end to end pipeline + findings</div>
-</div>
+# The Language of Complaints
+## NLP-Powered NYC 311 Service Request Triage and Resolution Time Prediction
+*CSGY-6513 Big Data, Section D, Term 2 -- Final Project Notebook*
 
-<table style="border-collapse:collapse;margin:8px 0 24px 0;font-size:14px;">
-<tr><td style="padding:6px 16px 6px 0;color:#666;">Course</td><td style="padding:6px 0;"><b>CSGY-6513 Big Data</b>, Section D, Term 2</td></tr>
-<tr><td style="padding:6px 16px 6px 0;color:#666;">Instructor</td><td style="padding:6px 0;">Prof. Amit Patel, NYU Tandon</td></tr>
-<tr><td style="padding:6px 16px 6px 0;color:#666;">Team</td><td style="padding:6px 0;">George Gideon Sale (gs4602) -- submitting member<br>Aayush Prranav Chandrashekar (ac11929)<br>Shreeram Sankar (ss18731)</td></tr>
-<tr><td style="padding:6px 16px 6px 0;color:#666;">Repository</td><td style="padding:6px 0;"><a href="https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp">github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp</a></td></tr>
-<tr><td style="padding:6px 16px 6px 0;color:#666;">Runtime</td><td style="padding:6px 0;">Google Colab Pro, H100/A100 GPU, High-RAM</td></tr>
-</table>
+| | |
+|---|---|
+| Course | **CSGY-6513 Big Data**, Section D, Term 2 |
+| Instructor | Prof. Amit Patel, NYU Tandon |
+| Team | George Gideon Sale (gs4602) -- submitting member<br>Aayush Prranav Chandrashekar (ac11929)<br>Shreeram Sankar (ss18731) |
+| Repository | https://github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp |
+| Runtime | Google Colab Pro, H100/A100 GPU, High-RAM |
 """))
 
 
@@ -93,8 +90,8 @@ cells.append(md("""
 
 We use both halves of NYC OpenData's 311 Service Request feed:
 
-- **2020-Present** -- portal page <a href="https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9">erm2-nwe9</a> -- about 20M rows -- SODA endpoint `https://data.cityofnewyork.us/resource/erm2-nwe9.csv`
-- **2010-2019 historical** -- portal page <a href="https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/76ig-c548">76ig-c548</a> -- about 23M rows -- SODA endpoint `https://data.cityofnewyork.us/resource/76ig-c548.csv`
+- **2020-Present** -- portal page erm2-nwe9 (https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9) -- about 20M rows -- SODA endpoint `https://data.cityofnewyork.us/resource/erm2-nwe9.csv`
+- **2010-2019 historical** -- portal page 76ig-c548 (https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/76ig-c548) -- about 23M rows -- SODA endpoint `https://data.cityofnewyork.us/resource/76ig-c548.csv`
 
 Combined that is roughly 43M rows, around 13 GB of CSV. The two endpoints renamed several columns between 2019 and 2020 (`Complaint Type` became `Problem` in our canonical schema, `Descriptor` became `Problem Detail`), so part of Phase 1 is the column normalizer that lets us union both halves on a uniform schema.
 
@@ -153,15 +150,15 @@ cells.append(md("""
 
 | Section | Phase | What it does | Approx runtime |
 |---------|-------|--------------|----------------|
-| <a href="#phase-0">Section 3</a> | Phase 0 | Environment and tooling verification (Spark, Java 11, Drive, SODA reachability) | <1 min |
-| <a href="#phase-1">Section 4</a> | Phase 1 | Pull 43M rows from both SODA endpoints, normalize schema, write parquet | 60-90 min |
-| <a href="#phase-2">Section 5</a> | Phase 2 | NLTK tokenize, lemmatize, stopword-filter; canonicalize labels | 1-2 hr |
-| <a href="#phase-3">Section 6</a> | Phase 3 | TF-IDF + Logistic Regression classifier (target macro-F1 >= 0.75) | 5-10 min |
-| <a href="#phase-4">Section 7</a> | Phase 4 | Resolution-time regression v1 then v2 with predicted category | 10-15 min |
-| <a href="#phase-5">Section 8</a> | Phase 5 | Word2Vec + K-Means sweep, top terms per cluster, latent issue discovery | 10-15 min |
-| <a href="#phase-6">Section 9</a> | Phase 6 | Per-borough volume, top categories, TF-IDF lift fingerprints | 5 min |
-| <a href="#phase-10">Section 10</a> | Phase 10 | BERT MiniLM encoding + KMeans, side-by-side vs Word2Vec | 10 min |
-| <a href="#findings">Section 11</a> | Findings | Numbered findings, live demo, limitations | -- |
+| Section 3 | Phase 0 | Environment and tooling verification (Spark, Java 11, Drive, SODA reachability) | <1 min |
+| Section 4 | Phase 1 | Pull 43M rows from both SODA endpoints, normalize schema, write parquet | 60-90 min |
+| Section 5 | Phase 2 | NLTK tokenize, lemmatize, stopword-filter; canonicalize labels | 1-2 hr |
+| Section 6 | Phase 3 | TF-IDF + Logistic Regression classifier (target macro-F1 >= 0.75) | 5-10 min |
+| Section 7 | Phase 4 | Resolution-time regression v1 then v2 with predicted category | 10-15 min |
+| Section 8 | Phase 5 | Word2Vec + K-Means sweep, top terms per cluster, latent issue discovery | 10-15 min |
+| Section 9 | Phase 6 | Per-borough volume, top categories, TF-IDF lift fingerprints | 5 min |
+| Section 10 | Phase 10 | BERT MiniLM encoding + KMeans, side-by-side vs Word2Vec | 10 min |
+| Section 11 | Findings | Numbered findings, live demo, limitations | -- |
 
 Every phase saves at least one portable artifact to `/content/project/models/portable/` or `/content/project/dashboard/assets/` so the deployed Streamlit app can pick it up.
 """))
@@ -259,62 +256,50 @@ print('=' * 78)
 
 # code cell that defines the visual helpers used throughout the notebook
 cells.append(md("""
-### Visual helpers
+### Output helpers
 
-We define three helper functions once here and reuse them across every phase. `print_phase_header` draws the NYU-purple banner at the start of each section, `print_metric_card` shows headline numbers as bordered tiles, and `styled_table` applies pandas styling with a purple gradient and consistent table chrome. Centralizing this means the visual language stays consistent without copy-pasting HTML.
+Below is a small set of helper functions for printing readable output. ASCII banners between phases, key-value lines for headline metrics, and plain dataframe prints for tables. No HTML, no styling -- the goal is a clean console-style aesthetic that travels well across Colab, Jupyter, and PDF export.
 """))
 
 cells.append(code("""
-# visual helpers used in every phase. defined once, reused.
-from IPython.display import HTML, Markdown, display
-import plotly.graph_objects as go
-import plotly.express as px
+# minimal output decorations - ASCII banners and plain prints. no HTML, no CSS,
+# no plotly palette tricks. matplotlib is still used where charts are needed.
 
-NYU_PURPLE = '#57068C'
-NYU_LIGHT = '#A491B5'
-NYU_ACCENT = '#FF6F00'
-PALETTE = ['#57068C', '#7F2CCB', '#A66BE0', '#FF6F00', '#FFB266', '#888888']
-
-def print_phase_header(num, title, subtitle=''):
-    sub_html = f'<div style=\"font-size:14px;margin-top:6px;opacity:0.9;\">{subtitle}</div>' if subtitle else ''
-    html = (
-        f'<div id=\"phase-{num}\" style=\"background:{NYU_PURPLE};color:white;'
-        f'padding:18px 24px;border-radius:6px;margin:24px 0 12px 0;\">'
-        f'<div style=\"font-size:14px;letter-spacing:0.15em;text-transform:uppercase;'
-        f'opacity:0.85;\">Phase {num}</div>'
-        f'<div style=\"font-size:28px;font-weight:600;margin-top:4px;\">{title}</div>'
-        f'{sub_html}</div>'
-    )
-    display(HTML(html))
+def banner(title, subtitle='', char='=', width=78):
+    bar = char * width
+    print(bar)
+    print(f'  {title}')
+    if subtitle:
+        print(f'  {subtitle}')
+    print(bar)
 
 
-def print_metric_card(label, value, sub=''):
-    sub_html = f'<div style=\"font-size:12px;color:#666;margin-top:4px;\">{sub}</div>' if sub else ''
-    html = (
-        f'<div style=\"display:inline-block;background:white;border:2px solid {NYU_PURPLE};'
-        f'border-radius:8px;padding:16px 24px;margin:6px 8px 6px 0;min-width:180px;'
-        f'vertical-align:top;\">'
-        f'<div style=\"font-size:12px;color:{NYU_PURPLE};letter-spacing:0.1em;'
-        f'text-transform:uppercase;\">{label}</div>'
-        f'<div style=\"font-size:32px;font-weight:600;color:#222;margin-top:4px;\">{value}</div>'
-        f'{sub_html}</div>'
-    )
-    display(HTML(html))
+def phase_header(num, title, subtitle=''):
+    banner(f'PHASE {num} -- {title.upper()}', subtitle=subtitle, char='=')
 
 
-def styled_table(df, highlight_cols=None, gradient_cols=None):
-    s = df.style
-    if highlight_cols:
-        s = s.background_gradient(subset=highlight_cols, cmap='Purples')
-    if gradient_cols:
-        s = s.background_gradient(subset=gradient_cols, cmap='RdYlGn')
-    return s.set_table_styles([
-        {'selector': 'th', 'props': f'background-color: {NYU_PURPLE}; color: white; padding: 8px;'},
-        {'selector': 'td', 'props': 'padding: 6px 12px;'},
-    ])
+def section(title, char='-', width=78):
+    print()
+    print(char * width)
+    print(f'  {title}')
+    print(char * width)
 
 
-print('visual helpers defined: print_phase_header, print_metric_card, styled_table')
+def metric(label, value, sub=''):
+    line = f'  {label:.<32} {value}'
+    if sub:
+        line += f'   ({sub})'
+    print(line)
+
+
+def show_table(df, max_rows=None):
+    # plain dataframe print, no styling
+    if max_rows:
+        df = df.head(max_rows)
+    print(df.to_string(index=False))
+
+
+print('output helpers defined: banner, phase_header, section, metric, show_table')
 """))
 
 
@@ -322,12 +307,8 @@ print('visual helpers defined: print_phase_header, print_metric_card, styled_tab
 # SECTION 3 - PHASE 0 ENV CHECK
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-0"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(0, 'Environment & Tooling', 'Sanity-check that everything is wired up')
+phase_header(0, 'Environment & Tooling', 'Sanity-check that everything is wired up')
 """))
 
 cells.append(md("""
@@ -362,10 +343,11 @@ print(f'  soda api     : {\"reachable\" if soda_ok else \"unreachable\"}')
 print(f'  src.* imports: ok (loaded from /content/project)')
 print()
 
-print_metric_card('Spark', spark.version, 'distributed engine')
-print_metric_card('Java', '11', 'PySpark 3.5 compat')
-print_metric_card('Drive', 'mounted' if drive_writable else 'failed', '/content/drive/MyDrive/cs6513')
-print_metric_card('SODA', 'ok' if soda_ok else 'down', 'NYC OpenData API')
+section('phase 0 metrics')
+metric('Spark', spark.version, 'distributed engine')
+metric('Java', '11', 'PySpark 3.5 compat')
+metric('Drive', 'mounted' if drive_writable else 'failed', '/content/drive/MyDrive/cs6513')
+metric('SODA', 'ok' if soda_ok else 'down', 'NYC OpenData API')
 """))
 
 
@@ -373,12 +355,8 @@ print_metric_card('SODA', 'ok' if soda_ok else 'down', 'NYC OpenData API')
 # SECTION 4 - PHASE 1 INGEST
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-1"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(1, 'Ingest (43M rows from SODA)', 'Pull, normalize, union, sample, persist')
+phase_header(1, 'Ingest (43M rows from SODA)', 'Pull, normalize, union, sample, persist')
 """))
 
 cells.append(md("""
@@ -455,9 +433,10 @@ sample.write.mode('overwrite').partitionBy('year').parquet(out_sample)
 print(f'sample written to {out_sample}')
 
 n_sample = sample.count()
-print_metric_card('Rows ingested', f'{n_sample:,}', 'after union')
-print_metric_card('Years covered', '2010-2025', 'partitioned by year')
-print_metric_card('Schema', 'unified', 'KEEP_COLS only')
+section('phase 1 metrics')
+metric('Rows ingested', f'{n_sample:,}', 'after union')
+metric('Years covered', '2010-2025', 'partitioned by year')
+metric('Schema', 'unified', 'KEEP_COLS only')
 """))
 
 cells.append(md("""
@@ -472,26 +451,18 @@ import pandas as pd
 top20 = sample.groupBy('problem').count().orderBy(F.desc('count')).limit(20).toPandas()
 top20.columns = ['Problem', 'Count']
 
-# pandas styled table with the purple gradient
-display(HTML('<h4 style=\"color:{};margin-top:16px;\">Top 20 raw labels (pre-canonicalization)</h4>'.format(NYU_PURPLE)))
-display(styled_table(top20, highlight_cols=['Count']))
+section('Top 20 raw labels (pre-canonicalization)')
+show_table(top20)
 
-# horizontal bar chart with plotly
-fig = go.Figure(go.Bar(
-    x=top20['Count'][::-1],
-    y=top20['Problem'][::-1],
-    orientation='h',
-    marker_color=NYU_PURPLE,
-))
-fig.update_layout(
-    title='Top 20 complaint categories (raw labels, before canonicalization)',
-    xaxis_title='count',
-    yaxis_title='',
-    height=600,
-    template='plotly_white',
-    margin=dict(l=240, r=40, t=60, b=40),
-)
-fig.show()
+# horizontal bar chart with matplotlib defaults
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 7))
+ax.barh(top20['Problem'][::-1], top20['Count'][::-1])
+ax.set_xlabel('count')
+ax.set_title('Top 20 complaint categories (raw labels, before canonicalization)')
+plt.tight_layout()
+plt.show()
 """))
 
 
@@ -499,12 +470,8 @@ fig.show()
 # SECTION 5 - PHASE 2 PREPROCESS
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-2"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(2, 'Preprocessing', 'Tokenize, lemmatize, stopword-filter, canonicalize labels')
+phase_header(2, 'Preprocessing', 'Tokenize, lemmatize, stopword-filter, canonicalize labels')
 """))
 
 cells.append(md("""
@@ -552,14 +519,15 @@ side = pd.DataFrame({
     'canonical_label': canonical_top30['label_canonical'].iloc[:15].values,
     'canonical_count': canonical_top30['count'].iloc[:15].values,
 })
-display(HTML('<h4 style=\"color:{};\">Raw vs canonical labels (top 15)</h4>'.format(NYU_PURPLE)))
-display(styled_table(side, highlight_cols=['raw_count', 'canonical_count']))
+section('Raw vs canonical labels (top 15)')
+show_table(side)
 
 n_raw_distinct = df_raw.select('problem').distinct().count()
 n_canon_distinct = df_labeled.select('label_canonical').distinct().count()
-print_metric_card('Raw labels', f'{n_raw_distinct:,}')
-print_metric_card('Canonical labels', f'{n_canon_distinct:,}', 'after merging synonyms')
-print_metric_card('Pairs collapsed', f'{n_raw_distinct - n_canon_distinct:,}')
+section('canonicalization summary')
+metric('Raw labels', f'{n_raw_distinct:,}')
+metric('Canonical labels', f'{n_canon_distinct:,}', 'after merging synonyms')
+metric('Pairs collapsed', f'{n_raw_distinct - n_canon_distinct:,}')
 """))
 
 cells.append(md("""
@@ -576,8 +544,8 @@ df_tok = preproc.transform(df_labeled)
 
 # sample a few rows to eyeball that tokenization makes sense
 sample_pdf = df_tok.select('problem_detail', 'tokens').limit(5).toPandas()
-display(HTML('<h4 style=\"color:{};\">Tokenization sample (first 5 rows)</h4>'.format(NYU_PURPLE)))
-display(sample_pdf)
+section('Tokenization sample (first 5 rows)')
+show_table(sample_pdf)
 """))
 
 cells.append(code("""
@@ -597,28 +565,22 @@ top_tokens = (
 )
 top_tokens.columns = ['Token', 'Count']
 
-print_metric_card('Total rows', f'{n_total:,}')
-print_metric_card('Empty token rows', f'{empty_pct:.1f}%', 'description was null/all stops')
-print_metric_card('Mean tokens / row', f'{mean_tokens:.2f}', 'descriptors are short')
+section('token quality')
+metric('Total rows', f'{n_total:,}')
+metric('Empty token rows', f'{empty_pct:.1f}%', 'description was null/all stops')
+metric('Mean tokens / row', f'{mean_tokens:.2f}', 'descriptors are short')
 """))
 
 cells.append(code("""
 # horizontal bar of top 30 tokens (sanity check that no stopwords leaked through)
-fig = go.Figure(go.Bar(
-    x=top_tokens['Count'][::-1],
-    y=top_tokens['Token'][::-1],
-    orientation='h',
-    marker_color=NYU_PURPLE,
-))
-fig.update_layout(
-    title='Top 30 tokens after preprocessing (sanity check: no stopwords)',
-    xaxis_title='count',
-    yaxis_title='',
-    height=700,
-    template='plotly_white',
-    margin=dict(l=160, r=40, t=60, b=40),
-)
-fig.show()
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(10, 8))
+ax.barh(top_tokens['Token'][::-1], top_tokens['Count'][::-1])
+ax.set_xlabel('count')
+ax.set_title('Top 30 tokens after preprocessing (sanity check: no stopwords)')
+plt.tight_layout()
+plt.show()
 """))
 
 cells.append(code("""
@@ -655,12 +617,8 @@ print('preprocess_stats.json saved')
 # SECTION 6 - PHASE 3 CLASSIFICATION
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-3"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(3, 'Classification', 'TF-IDF + multinomial Logistic Regression -- target macro-F1 >= 0.75')
+phase_header(3, 'Classification', 'TF-IDF + multinomial Logistic Regression -- target macro-F1 >= 0.75')
 """))
 
 cells.append(md("""
@@ -769,11 +727,12 @@ test_pdf['kw_pred'] = test_pdf['tokens'].apply(keyword_predict)
 f1_keyword = f1_score(test_pdf['label_canonical'], test_pdf['kw_pred'], average='macro', zero_division=0)
 acc_keyword = accuracy_score(test_pdf['label_canonical'], test_pdf['kw_pred'])
 
-# headline cards
-print_metric_card('Macro-F1', f'{lr_metrics[\"f1\"]:.3f}', f'target >= 0.75 -- {\"PASSED\" if lr_metrics[\"f1\"] >= 0.75 else \"missed\"}')
-print_metric_card('Accuracy', f'{lr_metrics[\"accuracy\"]:.3f}')
-print_metric_card('Lift over majority', f'+{(lr_metrics[\"f1\"] - f1_majority):.3f}', f'majority F1 = {f1_majority:.3f}')
-print_metric_card('Lift over keyword', f'+{(lr_metrics[\"f1\"] - f1_keyword):.3f}', f'keyword F1 = {f1_keyword:.3f}')
+# headline metrics
+section('classifier headline metrics')
+metric('Macro-F1', f'{lr_metrics[\"f1\"]:.3f}', f'target >= 0.75 -- {\"PASSED\" if lr_metrics[\"f1\"] >= 0.75 else \"missed\"}')
+metric('Accuracy', f'{lr_metrics[\"accuracy\"]:.3f}')
+metric('Lift over majority', f'+{(lr_metrics[\"f1\"] - f1_majority):.3f}', f'majority F1 = {f1_majority:.3f}')
+metric('Lift over keyword', f'+{(lr_metrics[\"f1\"] - f1_keyword):.3f}', f'keyword F1 = {f1_keyword:.3f}')
 """))
 
 cells.append(md("""
@@ -795,25 +754,13 @@ per_class = pd.DataFrame({
     'support': support,
 }).sort_values('support', ascending=False).reset_index(drop=True)
 
-# row-level conditional formatting: red where f1 < 0.5, green where f1 >= 0.85
-def highlight_f1(val):
-    if val < 0.5:
-        return f'background-color: #ffcccc'
-    elif val >= 0.85:
-        return f'background-color: #ccffcc'
-    return ''
-
-styled = (
-    per_class.style
-    .map(highlight_f1, subset=['f1'])
-    .background_gradient(subset=['support'], cmap='Purples')
-    .set_table_styles([
-        {'selector': 'th', 'props': f'background-color: {NYU_PURPLE}; color: white; padding: 8px;'},
-        {'selector': 'td', 'props': 'padding: 6px 12px;'},
-    ])
+# annotate weak / strong rows in plain text
+per_class['flag'] = per_class['f1'].apply(
+    lambda v: 'WEAK' if v < 0.5 else ('STRONG' if v >= 0.85 else '')
 )
-display(HTML('<h4 style=\"color:{};\">Per-class metrics (red = F1 below 0.5, green = F1 >= 0.85)</h4>'.format(NYU_PURPLE)))
-display(styled)
+
+section('Per-class metrics (flag: WEAK if F1 < 0.5, STRONG if F1 >= 0.85)')
+show_table(per_class)
 """))
 
 cells.append(md("""
@@ -823,26 +770,24 @@ Heatmap of normalized confusion across the 20 classes. The diagonal should domin
 """))
 
 cells.append(code("""
-# normalized confusion matrix as a plotly heatmap
+# normalized confusion matrix as a matplotlib heatmap
+import matplotlib.pyplot as plt
+
 cm = confusion_matrix(preds['label_canonical'], preds['pred_name'], labels=indexer_labels)
 cm_norm = cm / cm.sum(axis=1, keepdims=True)
 
-fig = go.Figure(go.Heatmap(
-    z=cm_norm,
-    x=indexer_labels,
-    y=indexer_labels,
-    colorscale='Purples',
-    hovertemplate='actual=%{y}<br>predicted=%{x}<br>fraction=%{z:.3f}<extra></extra>',
-))
-fig.update_layout(
-    title=f'Normalized confusion matrix (macro-F1 = {lr_metrics[\"f1\"]:.3f})',
-    xaxis_title='predicted',
-    yaxis_title='actual',
-    height=700,
-    template='plotly_white',
-    xaxis=dict(tickangle=45),
-)
-fig.show()
+fig, ax = plt.subplots(figsize=(11, 9))
+im = ax.imshow(cm_norm, aspect='auto', cmap='Blues')
+ax.set_xticks(range(len(indexer_labels)))
+ax.set_yticks(range(len(indexer_labels)))
+ax.set_xticklabels(indexer_labels, rotation=45, ha='right')
+ax.set_yticklabels(indexer_labels)
+ax.set_xlabel('predicted')
+ax.set_ylabel('actual')
+ax.set_title(f'Normalized confusion matrix (macro-F1 = {lr_metrics[\"f1\"]:.3f})')
+fig.colorbar(im, ax=ax, label='fraction')
+plt.tight_layout()
+plt.show()
 """))
 
 cells.append(code("""
@@ -888,12 +833,8 @@ print('classifier_summary.json saved')
 # SECTION 7 - PHASE 4 REGRESSION
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-4"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(4, 'Resolution Time Regression', 'log1p target -- target lift >= 10% MAE over baseline')
+phase_header(4, 'Resolution Time Regression', 'log1p target -- target lift >= 10% MAE over baseline')
 """))
 
 cells.append(md("""
@@ -1064,11 +1005,12 @@ cells.append(md("""
 """))
 
 cells.append(code("""
-# headline comparison cards
-print_metric_card('Baseline MAE', f'{mae_base:.1f} hrs', 'median per category')
-print_metric_card('v1 MAE', f'{mae_v1:.1f} hrs', f'lift {improvement_v1:+.1f}%')
-print_metric_card('v2 MAE', f'{mae_v2:.1f} hrs', f'lift {improvement_v2:+.1f}%')
-print_metric_card('Target met', 'YES' if improvement_v2 >= 10 else 'no', 'on >=10% MAE lift')
+# headline comparison
+section('regression v1 vs v2 vs baseline')
+metric('Baseline MAE', f'{mae_base:.1f} hrs', 'median per category')
+metric('v1 MAE', f'{mae_v1:.1f} hrs', f'lift {improvement_v1:+.1f}%')
+metric('v2 MAE', f'{mae_v2:.1f} hrs', f'lift {improvement_v2:+.1f}%')
+metric('Target met', 'YES' if improvement_v2 >= 10 else 'no', 'on >=10% MAE lift')
 """))
 
 cells.append(md("""
@@ -1101,8 +1043,8 @@ by_cat = test_with_label.groupby('label_canonical').agg(
 ).round(2).sort_values('support', ascending=False)
 by_cat['lift_pct'] = (100 * (by_cat['mae_baseline_hrs'] - by_cat['mae_model_hrs']) / by_cat['mae_baseline_hrs']).round(1)
 
-display(HTML('<h4 style=\"color:{};\">Per-category MAE: model vs baseline</h4>'.format(NYU_PURPLE)))
-display(styled_table(by_cat.reset_index(), gradient_cols=['lift_pct']))
+section('Per-category MAE: model vs baseline')
+show_table(by_cat.reset_index())
 """))
 
 cells.append(code("""
@@ -1159,12 +1101,8 @@ print('regress_by_category.json saved')
 # SECTION 8 - PHASE 5 WORD2VEC + KMEANS
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-5"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(5, 'Word2Vec + KMeans', 'Latent issue discovery -- where does the official taxonomy diverge from the data?')
+phase_header(5, 'Word2Vec + KMeans', 'Latent issue discovery -- where does the official taxonomy diverge from the data?')
 """))
 
 cells.append(md("""
@@ -1207,26 +1145,16 @@ A quick sanity check on the embedding quality. If `rat` returns `rodent`, `mouse
 cells.append(code("""
 # probe nearest words for known terms
 probe_words = ['rat', 'noise', 'pothole', 'leak', 'graffiti', 'tree']
-probe_html_parts = ['<div style=\"display:flex;flex-wrap:wrap;gap:12px;\">']
+section('Word2Vec synonym probes (top 5 per term)')
 for w in probe_words:
+    print()
     try:
         synonyms = w2v_model.findSynonymsArray(w, 5)
-        items = ''.join(
-            f'<div style=\"font-size:13px;color:#555;\">{s[0]} <span style=\"color:#999;\">({s[1]:.2f})</span></div>'
-            for s in synonyms
-        )
-        card = (
-            f'<div style=\"flex:1 1 200px;background:white;border-left:4px solid {NYU_PURPLE};'
-            f'padding:12px 16px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.05);\">'
-            f'<div style=\"font-size:11px;color:{NYU_PURPLE};letter-spacing:0.1em;text-transform:uppercase;\">probe</div>'
-            f'<div style=\"font-size:18px;font-weight:600;color:#222;margin-bottom:8px;\">{w}</div>'
-            f'{items}</div>'
-        )
+        print(f'  {w}')
+        for s in synonyms:
+            print(f'    {s[0]:<20} {s[1]:.2f}')
     except Exception:
-        card = f'<div style=\"flex:1 1 200px;\">{w}: not in vocab</div>'
-    probe_html_parts.append(card)
-probe_html_parts.append('</div>')
-display(HTML(''.join(probe_html_parts)))
+        print(f'  {w}: not in vocab')
 """))
 
 cells.append(code("""
@@ -1261,28 +1189,22 @@ print(f'\\nbest k = {best_k} (silhouette = {best_score:.4f})')
 """))
 
 cells.append(code("""
-# silhouette curve with best k starred
+# silhouette curve with default matplotlib styling
+import matplotlib.pyplot as plt
+
 ks = [r[0] for r in results]
 scores = [r[1] for r in results]
 
-fig = go.Figure()
-fig.add_trace(go.Scatter(
-    x=ks, y=scores, mode='lines+markers',
-    line=dict(color=NYU_PURPLE, width=3),
-    marker=dict(size=10, color=NYU_PURPLE),
-    name='silhouette',
-))
-fig.add_trace(go.Scatter(
-    x=[best_k], y=[best_score], mode='markers',
-    marker=dict(size=22, color=NYU_ACCENT, symbol='star'),
-    name=f'best k = {best_k}',
-))
-fig.update_layout(
-    title='K-Means silhouette by k (Word2Vec doc embeddings)',
-    xaxis_title='k', yaxis_title='silhouette',
-    template='plotly_white', height=440,
-)
-fig.show()
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(ks, scores, marker='o', label='silhouette')
+ax.scatter([best_k], [best_score], s=120, marker='D', label=f'best k = {best_k}')
+ax.set_xlabel('k')
+ax.set_ylabel('silhouette')
+ax.set_title('K-Means silhouette by k (Word2Vec doc embeddings)')
+ax.legend()
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 """))
 
 cells.append(code("""
@@ -1311,8 +1233,8 @@ for cid in range(best_k):
     terms_str = ', '.join(t for t, _ in cluster_top_terms[cid][:6])
     top_terms_rows.append({'cluster': cid, 'top_terms': terms_str})
 top_terms_df = pd.DataFrame(top_terms_rows)
-display(HTML('<h4 style=\"color:{};\">Top 6 terms per cluster (k={})</h4>'.format(NYU_PURPLE, best_k)))
-display(styled_table(top_terms_df))
+section(f'Top 6 terms per cluster (k={best_k})')
+show_table(top_terms_df)
 """))
 
 cells.append(code("""
@@ -1329,24 +1251,23 @@ for cid in range(best_k):
         for _, row in sub.iterrows()
     ]
 
-# heatmap of cluster x category
+# heatmap of cluster x category using matplotlib
+import matplotlib.pyplot as plt
+
 pivot = cross.pivot_table(index='cluster', columns='label_canonical', values='count', fill_value=0)
 # normalize by row so each cluster's row sums to 1
 pivot_norm = pivot.div(pivot.sum(axis=1), axis=0)
 
-fig = go.Figure(go.Heatmap(
-    z=pivot_norm.values,
-    x=pivot_norm.columns.tolist(),
-    y=[f'cluster {c}' for c in pivot_norm.index],
-    colorscale='Purples',
-    hovertemplate='cluster=%{y}<br>category=%{x}<br>fraction=%{z:.3f}<extra></extra>',
-))
-fig.update_layout(
-    title='Cluster vs official category (row-normalized)',
-    height=900, template='plotly_white',
-    xaxis=dict(tickangle=45),
-)
-fig.show()
+fig, ax = plt.subplots(figsize=(12, 9))
+im = ax.imshow(pivot_norm.values, aspect='auto', cmap='Blues')
+ax.set_xticks(range(len(pivot_norm.columns)))
+ax.set_yticks(range(len(pivot_norm.index)))
+ax.set_xticklabels(pivot_norm.columns.tolist(), rotation=45, ha='right')
+ax.set_yticklabels([f'cluster {c}' for c in pivot_norm.index])
+ax.set_title('Cluster vs official category (row-normalized)')
+fig.colorbar(im, ax=ax, label='fraction')
+plt.tight_layout()
+plt.show()
 
 # urban-decay callout: pick the cluster that has the most CROSS-CATEGORY span
 # (highest entropy across categories within the cluster). this is the latent
@@ -1359,19 +1280,16 @@ def entropy(row):
     return -float((p * p.apply(math.log2)).sum())
 entropies = pivot_norm.apply(entropy, axis=1)
 urban_decay_cid = int(entropies.idxmax())
-display(HTML(
-    f'<div style=\"background:#fff8e6;border-left:5px solid {NYU_ACCENT};padding:14px 20px;'
-    f'margin:16px 0;border-radius:4px;\">'
-    f'<div style=\"font-size:11px;color:{NYU_ACCENT};letter-spacing:0.1em;text-transform:uppercase;'
-    f'font-weight:600;\">Latent issue callout</div>'
-    f'<div style=\"font-size:15px;color:#333;margin-top:6px;\">'
-    f'Cluster <b>{urban_decay_cid}</b> spans the most categories (entropy = {entropies.iloc[urban_decay_cid]:.3f}). '
-    f'Top categories: {\", \".join(name for name, _, _ in cluster_categories[urban_decay_cid])}. '
-    f'Top terms: {\", \".join(t for t, _ in cluster_top_terms[urban_decay_cid][:6])}. '
-    f'This is the kind of cross-category latent grouping the proposal predicted -- e.g., "urban decay" '
-    f'spanning rodents, dirty conditions, and street disrepair.'
-    f'</div></div>'
-))
+
+print()
+banner('LATENT ISSUE CALLOUT', char='*')
+print(f'  Cluster {urban_decay_cid} spans the most categories (entropy = {entropies.iloc[urban_decay_cid]:.3f}).')
+print(f'  Top categories: {\", \".join(name for name, _, _ in cluster_categories[urban_decay_cid])}.')
+print(f'  Top terms: {\", \".join(t for t, _ in cluster_top_terms[urban_decay_cid][:6])}.')
+print()
+print('  This is the kind of cross-category latent grouping the proposal predicted')
+print('  -- e.g. "urban decay" spanning rodents, dirty conditions, and street disrepair.')
+print('*' * 78)
 """))
 
 cells.append(code("""
@@ -1418,12 +1336,8 @@ print('cluster_summary.json saved')
 # SECTION 9 - PHASE 6 GEO BOROUGH
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-6"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(6, 'Geographic Aggregation', 'Per-borough volume + TF-IDF lift fingerprints')
+phase_header(6, 'Geographic Aggregation', 'Per-borough volume + TF-IDF lift fingerprints')
 """))
 
 cells.append(md("""
@@ -1457,23 +1371,16 @@ volume = (
     .toPandas().sort_values('complaint_count', ascending=False)
 )
 
-fig = go.Figure(go.Bar(
-    x=volume['complaint_count'][::-1],
-    y=volume['borough_norm'][::-1],
-    orientation='h',
-    marker_color=NYU_PURPLE,
-    text=[f'{c:,}' for c in volume['complaint_count'][::-1]],
-    textposition='outside',
-))
-fig.update_layout(
-    title='Complaint volume by borough',
-    xaxis_title='complaint count',
-    yaxis_title='',
-    template='plotly_white',
-    height=380,
-    margin=dict(l=140, r=80, t=60, b=40),
-)
-fig.show()
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(9, 4))
+ax.barh(volume['borough_norm'][::-1], volume['complaint_count'][::-1])
+ax.set_xlabel('complaint count')
+ax.set_title('Complaint volume by borough')
+for i, v in enumerate(volume['complaint_count'][::-1]):
+    ax.text(v, i, f'  {v:,}', va='center')
+plt.tight_layout()
+plt.show()
 """))
 
 cells.append(code("""
@@ -1504,45 +1411,32 @@ for b, sub in lift_pdf.groupby('borough_norm'):
         for _, row in top.iterrows()
     ]
 
-# render fingerprint cards (one per borough)
-card_html_parts = ['<div style=\"display:flex;flex-wrap:wrap;gap:14px;margin:8px 0;\">']
+# render fingerprint summary as plain text (one block per borough)
 borough_order = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island']
+section('Borough fingerprints: top 5 distinctive terms by TF-IDF lift')
 for b in borough_order:
     if b not in fingerprints:
         continue
     terms = fingerprints[b]
-    items = ''.join(
-        f'<div style=\"font-size:13px;color:#444;margin:2px 0;\">'
-        f'<b>{term}</b> <span style=\"color:#888;\">x{lift:.2f}</span></div>'
-        for term, lift, _cnt in terms
-    )
-    card = (
-        f'<div style=\"flex:1 1 200px;background:white;border-top:4px solid {NYU_PURPLE};'
-        f'padding:14px 18px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.08);\">'
-        f'<div style=\"font-size:11px;color:{NYU_PURPLE};letter-spacing:0.1em;text-transform:uppercase;\">borough</div>'
-        f'<div style=\"font-size:18px;font-weight:600;color:#222;margin-bottom:10px;\">{b}</div>'
-        f'<div style=\"font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;'
-        f'margin-bottom:6px;\">distinctive terms (lift)</div>'
-        f'{items}</div>'
-    )
-    card_html_parts.append(card)
-card_html_parts.append('</div>')
-display(HTML(''.join(card_html_parts)))
+    print()
+    print(f'  {b}')
+    for term, lift, _cnt in terms:
+        print(f'    {term:<20} x{lift:.2f}')
 
-# proposal-confirmed callouts
-display(HTML(
-    f'<div style=\"background:#f0e6f7;border-left:5px solid {NYU_PURPLE};padding:14px 20px;'
-    f'margin:16px 0;border-radius:4px;\">'
-    f'<div style=\"font-size:11px;color:{NYU_PURPLE};letter-spacing:0.1em;text-transform:uppercase;'
-    f'font-weight:600;\">Proposal-confirmed findings</div>'
-    f'<div style=\"font-size:14px;color:#333;margin-top:6px;line-height:1.6;\">'
-    f'Manhattan distinctive terms cluster around the Consumer Complaint signature -- wallet, bag, clothing, '
-    f'electronics, insurance -- consistent with a borough where the dominant complaint vector is commerce. '
-    f'Staten Island distinctive terms cluster around suburban services -- plowed, recy, ewaste -- with the '
-    f'highest single-term lift (around 5.6x for plowed). These are exactly the kind of borough-character '
-    f'signatures the proposal predicted before we had the data to confirm them.'
-    f'</div></div>'
-))
+# proposal-confirmed callout in plain text
+print()
+banner('PROPOSAL-CONFIRMED FINDINGS', char='*')
+print('  Manhattan distinctive terms cluster around Consumer Complaint signals')
+print('  -- wallet, bag, clothing, electronics, insurance -- consistent with a borough')
+print('  where the dominant complaint vector is commerce.')
+print()
+print('  Staten Island distinctive terms cluster around suburban services')
+print('  -- plowed, recy, ewaste -- with the highest single-term lift in the corpus')
+print('  (around 5.6x for plowed).')
+print()
+print('  These are exactly the kind of borough-character signatures the proposal')
+print('  predicted before we had the data to confirm them.')
+print('*' * 78)
 """))
 
 cells.append(code("""
@@ -1605,12 +1499,8 @@ print('geo_summary.json saved')
 # SECTION 10 - PHASE 10 BERT EMBED
 # =====================================================================
 
-cells.append(md("""
-<a id="phase-10"></a>
-"""))
-
 cells.append(code("""
-print_phase_header(10, 'BERT Embedding Sidebar (Novelty)', 'Pretrained MiniLM vs trained Word2Vec')
+phase_header(10, 'BERT Embedding Sidebar (Novelty)', 'Pretrained MiniLM vs trained Word2Vec')
 """))
 
 cells.append(md("""
@@ -1628,7 +1518,8 @@ cells.append(code("""
 import torch
 gpu_available = torch.cuda.is_available()
 gpu_name = torch.cuda.get_device_name(0) if gpu_available else 'none'
-print_metric_card('GPU', 'available' if gpu_available else 'CPU only', gpu_name)
+section('GPU check')
+metric('GPU', 'available' if gpu_available else 'CPU only', gpu_name)
 """))
 
 cells.append(code("""
@@ -1679,9 +1570,10 @@ throughput = len(texts) / t_encode
 print(f'\\nencoded {len(texts):,} docs in {t_encode:.1f} sec ({throughput:.0f} docs/sec)')
 print(f'embedding shape: {embeddings.shape}')
 
-print_metric_card('Throughput', f'{throughput:.0f}/sec', 'docs encoded per second')
-print_metric_card('Embedding dim', f'{embeddings.shape[1]}', 'MiniLM output')
-print_metric_card('Memory', f'{embeddings.nbytes / 1024 / 1024:.0f} MB', 'in driver RAM')
+section('encoder metrics')
+metric('Throughput', f'{throughput:.0f}/sec', 'docs encoded per second')
+metric('Embedding dim', f'{embeddings.shape[1]}', 'MiniLM output')
+metric('Memory', f'{embeddings.nbytes / 1024 / 1024:.0f} MB', 'in driver RAM')
 """))
 
 cells.append(md("""
@@ -1700,55 +1592,34 @@ probe_phrases = [
 ]
 probe_embs = encoder.encode(probe_phrases, normalize_embeddings=True)
 
-probe_html_parts = []
+section('BERT probe-phrase retrieval (top 3 nearest descriptors)')
 for i, phrase in enumerate(probe_phrases):
     sims = embeddings @ probe_embs[i]
     top_idx = np.argsort(-sims)[:3]
-    items = []
+    print()
+    print(f'  probe: \"{phrase}\"')
     for idx in top_idx:
         sim = float(sims[idx])
         text = df_sample.iloc[idx]['problem_detail']
         cat = df_sample.iloc[idx]['label_canonical']
-        items.append(
-            f'<div style=\"margin:4px 0;\">'
-            f'<span style=\"color:{NYU_PURPLE};font-weight:600;\">{sim:.3f}</span> '
-            f'<span style=\"color:#888;font-size:12px;\">[{cat}]</span><br>'
-            f'<span style=\"color:#444;font-size:13px;\">{text[:80]}</span></div>'
-        )
-    items_html = ''.join(items)
-    card = (
-        f'<div style=\"flex:1 1 280px;background:white;border-left:4px solid {NYU_PURPLE};'
-        f'padding:14px 18px;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.08);\">'
-        f'<div style=\"font-size:11px;color:{NYU_PURPLE};letter-spacing:0.1em;text-transform:uppercase;\">probe</div>'
-        f'<div style=\"font-size:15px;font-weight:600;color:#222;margin-bottom:10px;\">"{phrase}"</div>'
-        f'<div style=\"font-size:11px;color:#888;letter-spacing:0.05em;text-transform:uppercase;'
-        f'margin-bottom:6px;\">top retrieved</div>'
-        f'{items_html}</div>'
-    )
-    probe_html_parts.append(card)
-
-display(HTML(
-    '<div style=\"display:flex;flex-wrap:wrap;gap:14px;margin:8px 0;\">' +
-    ''.join(probe_html_parts) +
-    '</div>'
-))
+        print(f'    sim={sim:.3f}  [{cat}]')
+        print(f'      {text[:80]}')
 
 # honest demo finding: rat infestation hijacked by ENTIRE BUILDING
-display(HTML(
-    f'<div style=\"background:#fff8e6;border-left:5px solid {NYU_ACCENT};padding:14px 20px;'
-    f'margin:16px 0;border-radius:4px;\">'
-    f'<div style=\"font-size:11px;color:{NYU_ACCENT};letter-spacing:0.1em;text-transform:uppercase;'
-    f'font-weight:600;\">Honest demo finding</div>'
-    f'<div style=\"font-size:14px;color:#333;margin-top:6px;line-height:1.6;\">'
-    f'The probe "rat infestation in the building" retrieves heat/hot-water complaints with the descriptor '
-    f'<b>ENTIRE BUILDING</b> (similarity around 0.40, not the closest possible match). The reason: at MiniLM\\\'s '
-    f'tokenization the phrase "in the building" matches strongly against the literal capitalized text '
-    f'<b>ENTIRE BUILDING</b> which appears thousands of times as a heat/hot-water descriptor. This is a real '
-    f'lesson about what pretrained sentence embeddings capture out of the box -- they are doing surface-level '
-    f'phrase matching, not deep concept matching. To fix it we would need either domain fine-tuning or a '
-    f'category-aware retrieval layer on top.'
-    f'</div></div>'
-))
+print()
+banner('HONEST DEMO FINDING', char='*')
+print('  The probe \"rat infestation in the building\" retrieves heat/hot-water')
+print('  complaints with the descriptor ENTIRE BUILDING (similarity around 0.40,')
+print('  not the closest possible match). The reason: at MiniLM\\'s tokenization')
+print('  the phrase \"in the building\" matches strongly against the literal')
+print('  capitalized text ENTIRE BUILDING which appears thousands of times as a')
+print('  heat/hot-water descriptor.')
+print()
+print('  This is a real lesson about what pretrained sentence embeddings capture')
+print('  out of the box -- they are doing surface-level phrase matching, not deep')
+print('  concept matching. To fix it we would need either domain fine-tuning or a')
+print('  category-aware retrieval layer on top.')
+print('*' * 78)
 """))
 
 cells.append(code("""
@@ -1787,36 +1658,30 @@ else:
 
 bert_sweep = {r[0]: r[1] for r in results_b}
 
-fig = go.Figure()
-if p5_sweep:
-    fig.add_trace(go.Scatter(
-        x=list(p5_sweep.keys()), y=list(p5_sweep.values()),
-        mode='lines+markers',
-        line=dict(color='#888888', width=2.5),
-        marker=dict(size=10, color='#888888'),
-        name='Word2Vec (Phase 5)',
-    ))
-fig.add_trace(go.Scatter(
-    x=list(bert_sweep.keys()), y=list(bert_sweep.values()),
-    mode='lines+markers',
-    line=dict(color=NYU_PURPLE, width=3),
-    marker=dict(size=12, color=NYU_PURPLE),
-    name='BERT MiniLM (Phase 10)',
-))
-fig.update_layout(
-    title='K-Means silhouette: Word2Vec vs BERT MiniLM',
-    xaxis_title='k', yaxis_title='silhouette',
-    template='plotly_white', height=460,
-)
-fig.show()
+import matplotlib.pyplot as plt
 
-# headline cards
+fig, ax = plt.subplots(figsize=(8, 5))
+if p5_sweep:
+    ax.plot(list(p5_sweep.keys()), list(p5_sweep.values()),
+            marker='o', label='Word2Vec (Phase 5)', linestyle='--')
+ax.plot(list(bert_sweep.keys()), list(bert_sweep.values()),
+        marker='s', label='BERT MiniLM (Phase 10)')
+ax.set_xlabel('k')
+ax.set_ylabel('silhouette')
+ax.set_title('K-Means silhouette: Word2Vec vs BERT MiniLM')
+ax.legend()
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+# headline metrics
 if p5_sweep:
     p5_at_best = p5_sweep.get(best_k_b, max(p5_sweep.values()))
     advantage = best_score_b - p5_at_best
-    print_metric_card('Word2Vec silhouette', f'{p5_at_best:.3f}', f'at k = {best_k_b}')
-    print_metric_card('BERT silhouette', f'{best_score_b:.3f}', f'at k = {best_k_b}')
-    print_metric_card('BERT advantage', f'+{advantage:.3f}', f'+{100*advantage/p5_at_best:.0f}% relative')
+    section('silhouette comparison')
+    metric('Word2Vec silhouette', f'{p5_at_best:.3f}', f'at k = {best_k_b}')
+    metric('BERT silhouette', f'{best_score_b:.3f}', f'at k = {best_k_b}')
+    metric('BERT advantage', f'+{advantage:.3f}', f'+{100*advantage/p5_at_best:.0f}% relative')
 """))
 
 cells.append(code("""
@@ -1837,8 +1702,8 @@ for cid in range(best_k_b):
     rows.append({'cluster': cid, 'top_categories': summary_str, 'cluster_size': int(len(sub))})
 
 bert_cat_df = pd.DataFrame(rows).sort_values('cluster_size', ascending=False).reset_index(drop=True)
-display(HTML('<h4 style=\"color:{};\">BERT cluster category breakdown</h4>'.format(NYU_PURPLE)))
-display(styled_table(bert_cat_df, gradient_cols=['cluster_size']))
+section('BERT cluster category breakdown')
+show_table(bert_cat_df)
 """))
 
 cells.append(code("""
@@ -1875,7 +1740,6 @@ print('bert_cluster_summary.json saved')
 # =====================================================================
 
 cells.append(md("""
-<a id="findings"></a>
 ## Findings and What They Mean
 
 Six numbered findings, each with what we measured and why it matters. These are the bullets the deployed Streamlit demo's About tab also surfaces.
