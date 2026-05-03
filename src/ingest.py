@@ -74,14 +74,24 @@ def fetch_soda_paginated(
     page_size: int = 50_000,
     where: Optional[str] = None,
     select: Optional[str] = None,
-    timeout: int = 60,
+    timeout: int = 90,
+    partial_dir: Optional[Path] = None,
 ) -> pd.DataFrame:
     """
     pull rows from a socrata endpoint with offset-based pagination.
 
     soda caps single requests at 50k rows and starts throttling around
     1k requests/hour for anonymous calls. with an app token were good
-    for higher volume. for 2m rows that means ~40 requests, ~30 minutes.
+    for higher volume. for 5m rows that means ~100 requests, ~10 min.
+
+    crash-safety: if `partial_dir` is given, every fetched page is written
+    to a separate parquet part-file inside that dir before the next request.
+    if the python process or the network dies mid-pull, re-running picks up
+    from the highest part_NNNNN.parquet on disk - no rows lost.
+
+    retry policy: up to 8 attempts per page with exponential backoff capped
+    at 60s. SODA's throttle windows can take 30-60s to clear, so the older
+    1s/2s/4s backoff exhausted before the throttle reset.
 
     Args:
         endpoint: full soda csv endpoint url, e.g. SODA_2020_PLUS.
@@ -89,18 +99,49 @@ def fetch_soda_paginated(
         page_size: rows per request. socrata caps at 50k.
         where: optional soql where clause, e.g. "created_date > '2023-01-01'".
         select: optional column selection.
-        timeout: seconds before requests gives up.
+        timeout: seconds per request before giving up.
+        partial_dir: directory to flush per-page parquet checkpoints into.
+            if None, behaves like the old in-memory-only version.
 
     Returns:
         a pandas dataframe with target_rows (or fewer if dataset has less).
     """
+    headers = _soda_headers()
     frames: List[pd.DataFrame] = []
     fetched = 0
     offset = 0
-    headers = _soda_headers()
+    next_part_idx = 0
+
+    # resume-from-disk: if partial_dir has parquet parts already, skip ahead.
+    # the part files are named part_00000.parquet, part_00001.parquet, etc.
+    # with sorted globbing we get them in fetch order and recover the offset.
+    if partial_dir is not None:
+        partial_dir.mkdir(parents=True, exist_ok=True)
+        existing_parts = sorted(partial_dir.glob("part_*.parquet"))
+        if existing_parts:
+            for part in existing_parts:
+                try:
+                    df_part = pd.read_parquet(part)
+                except Exception as e:
+                    # corrupt part - drop it and re-fetch its slice
+                    print(f"  dropping corrupt {part.name}: {e}")
+                    part.unlink()
+                    continue
+                frames.append(df_part)
+                fetched += len(df_part)
+            next_part_idx = len(existing_parts)
+            offset = fetched
+            print(
+                f"  resumed from disk: {fetched:,} rows in {next_part_idx} part files; "
+                f"continuing from offset {offset:,}"
+            )
+
+    # backoff schedule for retries: 1, 2, 4, 8, 16, 30, 60, 60 seconds.
+    # 8 attempts total means worst-case wait is ~3 minutes between successful
+    # pages - long enough for soda's per-token quota to refill.
+    BACKOFF = [1, 2, 4, 8, 16, 30, 60, 60]
 
     while fetched < target_rows:
-        # cap the last batch so we dont over-pull
         this_batch = min(page_size, target_rows - fetched)
 
         params = {
@@ -113,19 +154,22 @@ def fetch_soda_paginated(
         if select:
             params["$select"] = select
 
-        # one retry on transient failures - soda flakes occasionally
-        for attempt in range(3):
+        last_exc: Optional[Exception] = None
+        resp = None
+        for attempt, wait in enumerate(BACKOFF):
             try:
                 resp = requests.get(
                     endpoint, params=params, headers=headers, timeout=timeout
                 )
                 resp.raise_for_status()
+                last_exc = None
                 break
             except requests.RequestException as e:
-                if attempt == 2:
+                last_exc = e
+                if attempt == len(BACKOFF) - 1:
+                    print(f"  page at offset {offset} failed after {len(BACKOFF)} attempts: {e}")
                     raise
-                wait = 2 ** attempt  # 1s then 2s before giving up
-                print(f"  retry {attempt+1} after {wait}s: {e}")
+                print(f"  retry {attempt+1}/{len(BACKOFF)-1} after {wait}s: {e}")
                 time.sleep(wait)
 
         # parse csv from response. dtype=str keeps every column as string so
@@ -136,6 +180,15 @@ def fetch_soda_paginated(
         if len(chunk) == 0:
             print(f"  hit end of dataset at offset {offset}")
             break
+
+        # disk-flush this page BEFORE updating in-memory state. that way an
+        # exception between flush and counter-update just means we re-fetch
+        # this same page on retry (idempotent). if we updated counters first,
+        # a crash would leave inconsistent state on disk.
+        if partial_dir is not None:
+            part_path = partial_dir / f"part_{next_part_idx:05d}.parquet"
+            chunk.to_parquet(str(part_path), index=False, engine="pyarrow")
+            next_part_idx += 1
 
         frames.append(chunk)
         fetched += len(chunk)
@@ -244,13 +297,27 @@ def fetch_311_to_parquet(
 
     # step 3: pull from SODA + write raw checkpoint via pyarrow (no JVM)
     if not have_checkpoint:
+        # partial_dir holds per-page parquet parts. crash mid-pull -> resume
+        # from highest part_NNNNN file. naming: out_path stem + .partial/
+        partial = out.with_name(out.name.replace(".parquet", ".partial"))
         print(f"pulling {target_rows:,} rows from {endpoint}")
-        pdf = fetch_soda_paginated(endpoint, target_rows, where=where)
-        print(f"got {len(pdf):,} rows. checkpointing to {raw} (no spark conversion)")
+        print(f"  per-page checkpoints land in {partial}")
+        pdf = fetch_soda_paginated(
+            endpoint, target_rows, where=where, partial_dir=partial,
+        )
+        print(f"got {len(pdf):,} rows. consolidating to {raw} (no spark conversion)")
         # pandas to_parquet uses pyarrow under the hood. memory-stable and
         # crash-safe - if the next step blows up, this checkpoint persists.
         pdf.to_parquet(str(raw), index=False, engine="pyarrow")
         del pdf  # free pandas memory before spark loads the parquet
+        # raw consolidation succeeded - safe to remove the partial parts
+        if partial.exists():
+            for part in partial.glob("part_*.parquet"):
+                part.unlink()
+            try:
+                partial.rmdir()
+            except OSError:
+                pass  # not empty for some reason; leave it
         print(f"raw checkpoint written")
 
     # step 4: spark reads the raw parquet (columnar, no py4j row-by-row),
