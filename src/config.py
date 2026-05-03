@@ -9,8 +9,10 @@ import os
 SEED = 42
 
 # how many rows we sample for the dev corpus.
-# professor wants >=1m, we go to 2m for headroom.
-SAMPLE_SIZE = 2_000_000
+# professor wants >=1m. on colab with H100/A100 we run the FULL corpus
+# (~43M rows). set SAMPLE_SIZE to None to skip the stratified-sample step
+# entirely and use whatever the ingest produced.
+SAMPLE_SIZE = None  # full corpus mode; was 2_000_000 during dev
 
 # paths
 # on colab we mount drive at /content/drive. when we dev locally on the
