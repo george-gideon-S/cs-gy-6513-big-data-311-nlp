@@ -68,21 +68,48 @@ def commit_artifacts(message: str = 'phase artifacts from colab', paths: list | 
 
     _ensure_git_identity()
 
-    # stage
-    subprocess.run(['git', '-C', REPO_ROOT, 'add'] + paths, check=True)
-
-    # commit (skip if nothing changed)
-    res = subprocess.run(
-        ['git', '-C', REPO_ROOT, 'commit', '-m', message],
+    # stage. check=False because git add returns exit 1 when EVERY supplied
+    # path is gitignored - which is the expected case after we cleaned up
+    # the repo to keep generated artifacts out. we treat that as "nothing
+    # to stage" rather than as an error.
+    add_res = subprocess.run(
+        ['git', '-C', REPO_ROOT, 'add'] + paths,
         capture_output=True, text=True,
     )
-    fresh_commit = not (
-        'nothing to commit' in res.stdout or 'nothing added' in res.stdout
+    if add_res.returncode != 0:
+        # most common cause: every path was gitignored. show the message
+        # but dont crash.
+        msg = (add_res.stderr or '') + (add_res.stdout or '')
+        if 'ignored by one of your .gitignore' in msg:
+            print('all artifact paths are gitignored - nothing to stage.')
+        else:
+            print('git add reported issues:')
+            print(msg.strip())
+
+    # was anything actually staged? --cached --quiet exits 0 when no diff,
+    # exit 1 when there are staged changes. that is the truth signal.
+    staged_check = subprocess.run(
+        ['git', '-C', REPO_ROOT, 'diff', '--cached', '--quiet'],
+        capture_output=True, text=True,
     )
-    if fresh_commit:
-        print(res.stdout)
+    has_staged_changes = staged_check.returncode == 1
+
+    # commit (skip if nothing staged)
+    fresh_commit = False
+    if has_staged_changes:
+        res = subprocess.run(
+            ['git', '-C', REPO_ROOT, 'commit', '-m', message],
+            capture_output=True, text=True,
+        )
+        fresh_commit = not (
+            'nothing to commit' in res.stdout or 'nothing added' in res.stdout
+        )
+        if fresh_commit:
+            print(res.stdout)
+        else:
+            print('git reported nothing to commit despite staged changes (odd)')
     else:
-        print('nothing new to commit (will still try to push existing commits)')
+        print('nothing new to commit (artifacts gitignored or unchanged)')
 
     # check if there are unpushed commits to push
     ahead_check = subprocess.run(
