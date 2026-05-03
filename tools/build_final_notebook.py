@@ -77,9 +77,9 @@ cells.append(md("""
 cells.append(md("""
 ## Abstract
 
-This notebook is the entire pipeline for our final project, end to end. We pull around 43 million NYC 311 service request rows from the city's two SODA endpoints (the 2010-2019 historical set and the 2020-present set), normalize the schema, run NLTK preprocessing on the descriptors, train a TF-IDF plus multinomial Logistic Regression classifier for the top-20 complaint categories, fit a Linear Regression for resolution time on log1p(hours), discover latent issue groupings with Word2Vec plus K-Means, build per-borough TF-IDF lift fingerprints, and finish with a pretrained BERT MiniLM sentence-embedding sidebar so we can see how a modern transformer compares to our trained-from-scratch Word2Vec baseline.
+This notebook is the entire pipeline for our final project, end to end. We pull a 10 million row sample from NYC 311 (5M from each of the city's two SODA endpoints -- the 2010-2019 historical set and the 2020-present set, drawn from a combined corpus of around 43M rows / 13 GB CSV), normalize the schema, run NLTK preprocessing on the descriptors, train a TF-IDF plus multinomial Logistic Regression classifier for the top-20 complaint categories, fit a Linear Regression for resolution time on log1p(hours), discover latent issue groupings with Word2Vec plus K-Means, build per-borough TF-IDF lift fingerprints, and finish with a pretrained BERT MiniLM sentence-embedding sidebar so we can see how a modern transformer compares to our trained-from-scratch Word2Vec baseline.
 
-What this is meant to demonstrate: a real big-data NLP workflow at the 43M-row scale -- ingestion via paginated API, distributed text preprocessing in PySpark MLlib, classification, regression, unsupervised clustering, geographic aggregation, and a transformer comparison -- all reproducible from a single notebook. Every phase ends with a portable artifact (numpy .npz, gensim .kv, JSON) that gets loaded by a separately-deployed Streamlit dashboard, so the pipeline is not just a paper exercise -- the same models we train here run inference live in the demo.
+What this is meant to demonstrate: a real big-data NLP workflow above the GB-and-millions-of-rows threshold the course requires -- ingestion via paginated API, distributed text preprocessing in PySpark MLlib, classification, regression, unsupervised clustering, geographic aggregation, and a transformer comparison -- all reproducible from a single notebook. Every phase ends with a portable artifact (numpy .npz, gensim .kv, JSON) that gets loaded by a separately-deployed Streamlit dashboard, so the pipeline is not just a paper exercise -- the same models we train here run inference live in the demo.
 
 The story we want to tell: descriptors in 311 are short, so a simple linear model gets surprisingly far. But when we look at what the model can NOT do (cluster 18 in Word2Vec is "rats plus trash plus vacant lots" -- urban decay, a thing the official taxonomy never names), we start seeing where richer representations matter. BERT MiniLM lifts cluster silhouette by about 31 percent without us training anything. That is the trade-off: domain-trained Word2Vec finds richer cross-category groupings, BERT finds purer single-category groupings.
 """))
@@ -139,9 +139,9 @@ This notebook runs end to end on Google Colab Pro. The professor or any reviewer
 
 The bootstrap cell (Section 2) handles every dependency -- it mounts Drive, clones the project repo, installs requirements, downloads NLTK data, installs Java 11 for PySpark, reads the SODA app token from Colab Secrets if you have one configured, and starts the Spark session.
 
-**Be patient on Phase 1.** Pulling 43M rows from SODA takes about 60 to 90 minutes even with an app token because SODA caps a single request at 50K rows and rate-limits paginated calls. Phase 2 (NLTK preprocessing on the 43M corpus) runs about 1 to 2 hours on the Spark side. Phases 3-6 together run in roughly 30 minutes. Phase 10 (BERT) takes about 10 minutes on H100 because we only encode a 100K stratified subsample (the full 1.94M would be a 600 MB+ artifact, exceeds Streamlit Cloud's free-tier limit).
+**Phase 1 is the slowest piece.** Pulling 10M rows from SODA takes about 20 to 25 minutes with an app token because SODA caps a single request at 50K rows and rate-limits paginated calls. Phase 2 (NLTK preprocessing on the 10M sample) runs about 25 to 35 minutes on the Spark side. Phases 3-6 together run in roughly 15 minutes. Phase 10 (BERT) takes about 5 to 10 minutes on H100/A100 because we only encode a 100K stratified subsample (the full 10M would be a 4 GB+ embedding tensor and would also exceed Streamlit Cloud's free-tier deploy limit).
 
-End to end the notebook completes in **roughly 3 to 5 hours** on a Colab Pro H100 instance. If you want to skim faster, every phase loads its inputs from `/content/drive/MyDrive/cs6513/` so any phase can be re-run independently after Phase 2 has produced the preprocessed parquet once.
+End to end the notebook completes in **roughly 1 to 1.5 hours** on a Colab Pro H100 or A100 instance. If you want to skim faster, every phase loads its inputs from `/content/drive/MyDrive/cs6513/` so any phase can be re-run independently after Phase 2 has produced the preprocessed parquet once.
 """))
 
 
@@ -151,8 +151,8 @@ cells.append(md("""
 | Section | Phase | What it does | Approx runtime |
 |---------|-------|--------------|----------------|
 | Section 3 | Phase 0 | Environment and tooling verification (Spark, Java 11, Drive, SODA reachability) | <1 min |
-| Section 4 | Phase 1 | Pull 43M rows from both SODA endpoints, normalize schema, write parquet | 60-90 min |
-| Section 5 | Phase 2 | NLTK tokenize, lemmatize, stopword-filter; canonicalize labels | 1-2 hr |
+| Section 4 | Phase 1 | Pull 10M rows (5M each side) from both SODA endpoints, normalize schema, write parquet | 20-25 min |
+| Section 5 | Phase 2 | NLTK tokenize, lemmatize, stopword-filter; canonicalize labels | 25-35 min |
 | Section 6 | Phase 3 | TF-IDF + Logistic Regression classifier (target macro-F1 >= 0.75) | 5-10 min |
 | Section 7 | Phase 4 | Resolution-time regression v1 then v2 with predicted category | 10-15 min |
 | Section 8 | Phase 5 | Word2Vec + K-Means sweep, top terms per cluster, latent issue discovery | 10-15 min |
@@ -364,13 +364,13 @@ NYC OpenData splits the 311 feed into two SODA datasets at the 2020 boundary -- 
 
 The key column rename: the historical 2010-2019 set used `Complaint Type` and `Descriptor` (lowercased to `complaint_type` and `descriptor` by SODA's API), while the 2020+ set already uses cleaner names. Our canonical schema renames both to `problem` and `problem_detail` -- the function `normalize_columns` in `src/ingest.py` handles this and also adds `null` placeholders for any missing column so the union schema is uniform.
 
-SODA's pagination caps at 50,000 rows per request and starts throttling around 1,000 requests per hour for anonymous calls. With a free SODA app token (which we read from Colab Secrets in the bootstrap cell), 25M rows takes roughly 60 to 90 minutes. The order-by `unique_key` makes pagination deterministic so we do not risk page overlap.
+SODA's pagination caps at 50,000 rows per request and starts throttling around 1,000 requests per hour for anonymous calls. With a free SODA app token (which we read from Colab Secrets in the bootstrap cell), 5M rows from one endpoint takes roughly 10 to 12 minutes -- so the full 10M-row pull (5M from each side) is around 20 to 25 minutes. The order-by `unique_key` makes pagination deterministic so we do not risk page overlap.
 
-Once both halves are persisted to Drive, we union them and (in full-corpus mode, which is what `src/config.py::SAMPLE_SIZE = None` selects) keep every row. The dev branch had `SAMPLE_SIZE = 2_000_000` for fast iteration -- but on H100 with the full 43M corpus available we keep all of it.
+Once both halves are persisted to Drive, we union them. With `src/config.py::SAMPLE_SIZE = None` we keep every row of the 10M union -- that is around 3 GB of original CSV data and clears the GB-and-millions-of-rows requirement with margin. The dev branch had `SAMPLE_SIZE = 2_000_000` for fast iteration; the previous version of this notebook attempted the full 43M corpus but the SODA pull alone took 60+ minutes for marginal F1 gain (descriptors are short categorical text, the model saturates well below 10M).
 """))
 
 cells.append(code("""
-# pull from the 2020+ endpoint. with a soda token this is ~30-50 min.
+# pull from the 2020+ endpoint. with a soda token this is ~10-12 min for 5m rows.
 from src.config import SODA_2020_PLUS, SODA_2010_2019
 from src.ingest import fetch_311_to_parquet
 
@@ -378,7 +378,7 @@ out_path_2020 = '/content/drive/MyDrive/cs6513/raw/2020plus.parquet'
 n_2020 = fetch_311_to_parquet(
     spark=spark,
     endpoint=SODA_2020_PLUS,
-    target_rows=25_000_000,  # 2020+ has ~20M; 25M is comfortably above
+    target_rows=5_000_000,  # 5m rows from the 2020+ side (~1.5 GB raw csv)
     out_path=out_path_2020,
 )
 print(f'2020+ done. {n_2020:,} rows on disk at {out_path_2020}')
@@ -390,7 +390,7 @@ out_path_hist = '/content/drive/MyDrive/cs6513/raw/historical.parquet'
 n_hist = fetch_311_to_parquet(
     spark=spark,
     endpoint=SODA_2010_2019,
-    target_rows=25_000_000,  # historical has ~23M; 25M covers
+    target_rows=5_000_000,  # 5m rows from the historical side (~1.5 GB raw csv)
     out_path=out_path_hist,
 )
 print(f'2010-2019 done. {n_hist:,} rows on disk at {out_path_hist}')
@@ -426,8 +426,8 @@ else:
 sample = sample.withColumn('year', F.year('created_date'))
 
 # filename is sample_2m.parquet for backward compat across all downstream phases,
-# even though in full-corpus mode this is actually 43M rows. naming purity vs
-# touching every notebook downstream - we picked the latter cost.
+# even though this run actually holds ~10M rows. naming purity vs touching every
+# notebook downstream - we picked the latter cost.
 out_sample = '/content/drive/MyDrive/cs6513/sample_2m.parquet'
 sample.write.mode('overwrite').partitionBy('year').parquet(out_sample)
 print(f'sample written to {out_sample}')
