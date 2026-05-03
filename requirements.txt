@@ -7,7 +7,10 @@
 
 streamlit>=1.31
 pandas>=2.0
-numpy>=1.24,<2.0
+# numpy upper bound removed: colab + modern streamlit cloud both ship
+# numpy 2.x. forcing <2 here breaks colabs preinstalled pandas (binary
+# ABI mismatch, "numpy.dtype size changed" error).
+numpy>=1.24
 
 # plotting + maps
 plotly>=5.18
