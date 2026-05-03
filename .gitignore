@@ -11,18 +11,19 @@ spark-warehouse/
 *.crc
 _SUCCESS
 
-# trained models - all generated artifacts stay out of the repo
-# (deployed Streamlit can fetch them from drive or commit-on-demand)
+# trained models. heavy spark PipelineModels stay on drive only;
+# the slim portable artifacts that the deployed dashboard loads are
+# kept in git so streamlit cloud can serve a working demo.
 models/
 !models/.gitkeep
+!models/portable/
 !models/portable/.gitkeep
+!models/portable/*.npz
+!models/portable/*.kv
 
-# generated dashboard artifacts (json + png from notebook runs)
-# nyc_boroughs.geojson is the only bundled INPUT so we explicitly keep it
-dashboard/assets/*.json
-dashboard/assets/*.npz
-dashboard/assets/*.png
-!dashboard/assets/.gitkeep
+# dashboard runtime artifacts. the deployed app reads these directly at
+# request time, so they need to be in the repo. the heavy intermediate
+# parquets stay on drive (those are excluded by the *.parquet rule above).
 
 # dev-only phase notebooks (superseded by FINAL_PROJECT_311_NLP.ipynb).
 # the unified notebook is the only one that matters.

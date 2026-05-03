@@ -15,8 +15,8 @@ def render() -> None:
     st.markdown(
         '<p style="font-size: 15px; color: #4A4A4A; line-height: 1.55; max-width: 800px;">'
         'Where complaints concentrate across the five boroughs and what '
-        'categories dominate each one. Aggregated from the 2 million row '
-        'stratified sample of NYC 311 complaints.'
+        'categories dominate each one. Aggregated from the 10 million row '
+        'sample of NYC 311 complaints.'
         '</p>',
         unsafe_allow_html=True,
     )
@@ -27,7 +27,7 @@ def render() -> None:
     if not geo or not volumes:
         empty_state(
             'Borough volume data not yet published. Run '
-            '<code>notebooks/06_geo_census.ipynb</code> in Colab.',
+            '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab.',
             action='dashboard/assets/borough_volume.json',
         )
         return

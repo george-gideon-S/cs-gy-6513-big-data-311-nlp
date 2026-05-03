@@ -30,7 +30,7 @@ def render() -> None:
     if not summary or not per_class:
         empty_state(
             'Per-class metrics not yet published. Run '
-            '<code>notebooks/03_classify.ipynb</code> in Colab and the '
+            '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab and the '
             'auto-commit cell will push these artifacts.',
             action='dashboard/assets/classifier_summary.json + per_class_metrics.json',
         )

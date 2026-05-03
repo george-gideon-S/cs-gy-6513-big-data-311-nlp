@@ -143,17 +143,30 @@ header [data-testid="stToolbar"] { gap: 4px; }
     line-height: 1.55 !important;
 }
 
-/* button polish */
+/* button polish - explicit white text against purple bg, the default
+   inherits a darker color from the body which made labels nearly invisible */
 button[kind="primary"] {
     background-color: #57068C !important;
     border-color: #57068C !important;
+    color: #FFFFFF !important;
     font-weight: 600 !important;
     letter-spacing: 0.02em !important;
     padding: 10px 20px !important;
 }
+button[kind="primary"] p,
+button[kind="primary"] span,
+button[kind="primary"] div {
+    color: #FFFFFF !important;
+}
 button[kind="primary"]:hover {
     background-color: #3A0560 !important;
     border-color: #3A0560 !important;
+    color: #FFFFFF !important;
+}
+button[kind="primary"]:disabled {
+    background-color: #B89BD0 !important;
+    border-color: #B89BD0 !important;
+    color: #FFFFFF !important;
 }
 
 /* radios / selectbox - tidier */
@@ -207,8 +220,8 @@ def main() -> None:
     with st.sidebar:
         st.markdown('## About this project')
         st.markdown(
-            'A 2 million row stratified sample of NYC 311 complaints '
-            '(2010 to present), distilled into:'
+            'A 10 million row sample of NYC 311 complaints '
+            '(2010 to present, drawn from a 43M-row corpus), distilled into:'
         )
         st.markdown(
             '- A classifier that maps free text to one of 20 official categories\n'

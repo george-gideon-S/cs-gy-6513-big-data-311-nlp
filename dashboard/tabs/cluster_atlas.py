@@ -141,7 +141,7 @@ def render() -> None:
         if not data:
             empty_state(
                 'Word2Vec cluster summary not yet published. Run '
-                '<code>notebooks/05_word2vec.ipynb</code> in Colab.',
+                '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab.',
                 action='dashboard/assets/cluster_summary.json',
             )
         else:
@@ -151,7 +151,7 @@ def render() -> None:
         if not data:
             empty_state(
                 'BERT cluster summary not yet published. Run '
-                '<code>notebooks/10_bert_embed.ipynb</code> in Colab on a GPU runtime.',
+                '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab on a GPU runtime.',
                 action='dashboard/assets/bert_cluster_summary.json',
             )
         else:
@@ -179,7 +179,7 @@ def render() -> None:
     if not fingerprints:
         empty_state(
             'Per-borough vocabulary not yet published. Run '
-            '<code>notebooks/06_geo_census.ipynb</code> in Colab.',
+            '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab.',
             action='dashboard/assets/borough_fingerprints.json',
         )
         return

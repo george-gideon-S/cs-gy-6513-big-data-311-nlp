@@ -142,7 +142,7 @@ def render() -> None:
     if classifier is None:
         empty_state(
             'The classifier artifact is not yet published to the repo. '
-            'Once <code>notebooks/03_classify.ipynb</code> runs in Colab, '
+            'Once <code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> runs in Colab, '
             'its auto-commit cell will push <code>models/portable/classifier.npz</code> '
             'and this section will become live.',
             action='models/portable/classifier.npz',
@@ -207,8 +207,8 @@ def render() -> None:
     if regressor is None:
         empty_state(
             'The resolution-time regressor is not yet published. Once '
-            '<code>notebooks/04_regress.ipynb</code> runs (including the v2 '
-            'cell that adds <code>label_canonical</code> as a feature), '
+            '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> runs (including the v2 '
+            'regression block that adds <code>label_canonical</code> as a feature), '
             'its auto-commit cell will push <code>models/portable/regressor.npz</code>.',
             action='models/portable/regressor.npz',
         )
@@ -243,7 +243,7 @@ def render() -> None:
     if not fingerprints or borough not in fingerprints:
         empty_state(
             'Per-borough fingerprints not yet published. Run '
-            '<code>notebooks/06_geo_census.ipynb</code> in Colab.',
+            '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code> in Colab.',
             action='dashboard/assets/borough_fingerprints.json',
         )
         return
@@ -264,7 +264,7 @@ def render() -> None:
         st.markdown(
             f'<p style="font-size: 13px; color: {GRAY_MUTED}; margin-top: -8px;">'
             f'{borough} contributed <b style="color: {GRAY_TEXT};">{v["count"]:,}</b> '
-            f'complaints to the 2M sample. '
+            f'complaints to the 10M sample. '
             f'Top categories: '
             + ', '.join(f'<b style="color: {GRAY_TEXT};">{c[0]}</b>'
                         for c in v['top_categories'][:3])

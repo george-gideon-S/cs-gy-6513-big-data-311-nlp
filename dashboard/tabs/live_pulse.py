@@ -83,7 +83,7 @@ def render() -> None:
             empty_state(
                 'Showing raw API rows only. Live classification needs the '
                 'portable classifier - run '
-                '<code>notebooks/03_classify.ipynb</code>.',
+                '<code>notebooks/FINAL_PROJECT_311_NLP.ipynb</code>.',
                 action='models/portable/classifier.npz',
             )
         m1 = st.columns(1)[0]
