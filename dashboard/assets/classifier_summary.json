@@ -1,0 +1,49 @@
+{
+  "phase": 3,
+  "trained_at": "2026-05-03T13:11:03.215255Z",
+  "n_train": 5337921,
+  "n_test": 1336462,
+  "n_classes": 20,
+  "classes": [
+    "Noise - Residential",
+    "Heat/Hot Water",
+    "Bulky Item Collection",
+    "General Construction",
+    "Illegal Parking",
+    "Noise - Street/Sidewalk",
+    "Street Light Condition",
+    "Plumbing",
+    "Street Condition",
+    "Blocked Driveway",
+    "Paint/Plaster",
+    "Water System",
+    "Traffic Signal Condition",
+    "Noise - Vehicle",
+    "Damaged Tree",
+    "NONCONST",
+    "Noise",
+    "Dirty Conditions",
+    "Sewer",
+    "Literature Request"
+  ],
+  "model": "tf-idf + logistic regression (multinomial)",
+  "feature_dim": 16384,
+  "metrics": {
+    "f1": 0.933319446746138,
+    "weightedFMeasure": 0.933319446746138,
+    "accuracy": 0.9446456390080675
+  },
+  "baselines": {
+    "majority_class": {
+      "macro_f1": 0.01238578360738275,
+      "accuracy": 0.141367281673553
+    },
+    "keyword_heuristic": {
+      "macro_f1": 0.7935675466159611,
+      "accuracy": 0.7909772219486974
+    }
+  },
+  "lift_over_majority_f1": 0.9209336631387552,
+  "lift_over_keyword_f1": 0.1397519001301769,
+  "training_time_sec": 47.343241691589355
+}

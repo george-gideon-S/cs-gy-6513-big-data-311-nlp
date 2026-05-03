@@ -1,0 +1,30 @@
+{
+  "phase": 6,
+  "computed_at": "2026-05-03T13:16:14.024756Z",
+  "rows_aggregated": 8679512,
+  "aggregation_unit": "borough",
+  "n_boroughs": 5,
+  "volumes": [
+    {
+      "borough": "Brooklyn",
+      "count": 2643422
+    },
+    {
+      "borough": "Queens",
+      "count": 2189689
+    },
+    {
+      "borough": "Bronx",
+      "count": 1708600
+    },
+    {
+      "borough": "Manhattan",
+      "count": 1657551
+    },
+    {
+      "borough": "Staten Island",
+      "count": 480250
+    }
+  ],
+  "note": "pivoted from community-districts to boroughs because mzpm-a6vd dataset returns empty geometries currently"
+}

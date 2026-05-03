@@ -1,0 +1,23 @@
+{
+  "phase": 4,
+  "trained_at": "2026-05-03T13:12:20.621333Z",
+  "n_train": 4917475,
+  "n_test": 1229405,
+  "model": "v2: tf-idf + agency_oh + borough_oh + cat_oh + temporal + LR on log1p(hours)",
+  "metrics_hours_space": {
+    "mae": 113.07275594909666,
+    "rmse": 448.8526014322573,
+    "r2": 0.09263582016312188
+  },
+  "baseline_median_per_category": {
+    "mae": 116.40228454437535
+  },
+  "improvement_pct": 2.860363615981602,
+  "v1_metrics_hours_space": {
+    "mae": 113.19762899254454,
+    "rmse": 449.425266414921,
+    "r2": 0.09031903659360085
+  },
+  "v1_improvement_pct": 2.753086474526296,
+  "training_time_sec": 28.070982933044434
+}

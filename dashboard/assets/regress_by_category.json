@@ -1,0 +1,162 @@
+[
+  {
+    "label_canonical":"Noise - Residential",
+    "support":189588,
+    "actual_median_hrs":1.0,
+    "mae_model_hrs":4.7,
+    "mae_baseline_hrs":4.64,
+    "lift_pct":-1.3
+  },
+  {
+    "label_canonical":"Heat\/Hot Water",
+    "support":129439,
+    "actual_median_hrs":72.0,
+    "mae_model_hrs":39.72,
+    "mae_baseline_hrs":42.46,
+    "lift_pct":6.5
+  },
+  {
+    "label_canonical":"Bulky Item Collection",
+    "support":97329,
+    "actual_median_hrs":63.47,
+    "mae_model_hrs":47.41,
+    "mae_baseline_hrs":48.25,
+    "lift_pct":1.7
+  },
+  {
+    "label_canonical":"Illegal Parking",
+    "support":91700,
+    "actual_median_hrs":0.9,
+    "mae_model_hrs":2.61,
+    "mae_baseline_hrs":2.55,
+    "lift_pct":-2.4
+  },
+  {
+    "label_canonical":"General Construction",
+    "support":81083,
+    "actual_median_hrs":240.0,
+    "mae_model_hrs":348.76,
+    "mae_baseline_hrs":368.65,
+    "lift_pct":5.4
+  },
+  {
+    "label_canonical":"Noise - Street\/Sidewalk",
+    "support":76929,
+    "actual_median_hrs":0.56,
+    "mae_model_hrs":1.76,
+    "mae_baseline_hrs":1.71,
+    "lift_pct":-2.9
+  },
+  {
+    "label_canonical":"Blocked Driveway",
+    "support":67915,
+    "actual_median_hrs":1.41,
+    "mae_model_hrs":3.22,
+    "mae_baseline_hrs":3.17,
+    "lift_pct":-1.6
+  },
+  {
+    "label_canonical":"Street Condition",
+    "support":66556,
+    "actual_median_hrs":75.17,
+    "mae_model_hrs":130.54,
+    "mae_baseline_hrs":139.36,
+    "lift_pct":6.3
+  },
+  {
+    "label_canonical":"Plumbing",
+    "support":66515,
+    "actual_median_hrs":240.0,
+    "mae_model_hrs":278.22,
+    "mae_baseline_hrs":286.53,
+    "lift_pct":2.9
+  },
+  {
+    "label_canonical":"Paint\/Plaster",
+    "support":55938,
+    "actual_median_hrs":239.01,
+    "mae_model_hrs":243.74,
+    "mae_baseline_hrs":245.43,
+    "lift_pct":0.7
+  },
+  {
+    "label_canonical":"Water System",
+    "support":45804,
+    "actual_median_hrs":7.3,
+    "mae_model_hrs":124.11,
+    "mae_baseline_hrs":126.79,
+    "lift_pct":2.1
+  },
+  {
+    "label_canonical":"Traffic Signal Condition",
+    "support":35234,
+    "actual_median_hrs":1.73,
+    "mae_model_hrs":92.42,
+    "mae_baseline_hrs":92.37,
+    "lift_pct":-0.1
+  },
+  {
+    "label_canonical":"Noise - Vehicle",
+    "support":34773,
+    "actual_median_hrs":0.66,
+    "mae_model_hrs":1.71,
+    "mae_baseline_hrs":1.65,
+    "lift_pct":-3.6
+  },
+  {
+    "label_canonical":"Noise",
+    "support":30880,
+    "actual_median_hrs":89.18,
+    "mae_model_hrs":115.21,
+    "mae_baseline_hrs":119.39,
+    "lift_pct":3.5
+  },
+  {
+    "label_canonical":"NONCONST",
+    "support":30772,
+    "actual_median_hrs":264.0,
+    "mae_model_hrs":265.42,
+    "mae_baseline_hrs":268.62,
+    "lift_pct":1.2
+  },
+  {
+    "label_canonical":"Dirty Conditions",
+    "support":30266,
+    "actual_median_hrs":70.47,
+    "mae_model_hrs":161.58,
+    "mae_baseline_hrs":162.29,
+    "lift_pct":0.4
+  },
+  {
+    "label_canonical":"Sewer",
+    "support":28979,
+    "actual_median_hrs":8.0,
+    "mae_model_hrs":133.77,
+    "mae_baseline_hrs":143.32,
+    "lift_pct":6.7
+  },
+  {
+    "label_canonical":"Damaged Tree",
+    "support":24970,
+    "actual_median_hrs":171.75,
+    "mae_model_hrs":701.61,
+    "mae_baseline_hrs":704.77,
+    "lift_pct":0.4
+  },
+  {
+    "label_canonical":"Street Light Condition",
+    "support":24329,
+    "actual_median_hrs":55.73,
+    "mae_model_hrs":468.71,
+    "mae_baseline_hrs":473.5,
+    "lift_pct":1.0
+  },
+  {
+    "label_canonical":"Literature Request",
+    "support":20406,
+    "actual_median_hrs":4.7,
+    "mae_model_hrs":12.3,
+    "mae_baseline_hrs":11.96,
+    "lift_pct":-2.8
+  }
+]
