@@ -39,10 +39,12 @@ notebooks/09_*.ipynb
 notebooks/10_*.ipynb
 
 # internal dev / private course material
-CLAUDE.md
-HADOOP_ASSIGNMENT_MASTER_PROMPT.md
+*.notes.md
+internal-*.md
 PROFESSOR DOCS/
 docs/SESSION_GUIDE.md
+docs/*.private.md
+docs/sample source script*.txt
 
 # python
 __pycache__/
