@@ -1,5 +1,8 @@
 \documentclass{article}
 
+% NOTE: figures/*.pdf are placeholders; export the relevant matplotlib charts
+% from the notebook outputs and drop them in figures/ before compiling.
+
 % NeurIPS 2026 style file (default option for the Main Track).
 \usepackage{neurips_2026}
 
@@ -13,6 +16,8 @@
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes, arrows.meta, fit}
 
 \title{Triage at City Scale: A Dual-Embedding NLP Pipeline for the NYC 311 Service-Request Corpus}
 
@@ -91,7 +96,56 @@ A practical constraint shapes the entire architecture. We need to demonstrate th
 
 We resolve this with a portability split. All training happens in Colab Pro on an A100 GPU with high-RAM PySpark in \texttt{local[*]} mode, and all phases that produce a deployed artifact also export a portable counterpart. The portable artifacts are numpy \texttt{.npz} files for the classifier and regressor coefficients, a gensim \texttt{KeyedVectors} \texttt{.kv} for Word2Vec, and a parquet for the borough fingerprints and BERT cluster assignments. The deployed Streamlit dashboard reads these artifacts via plain numpy and gensim at request time. The total deployed bundle lands around 220 MB, well within the free-tier limit, and serves predictions in well under a second.
 
-This split also gives us a useful crash-safety property. The Colab side writes intermediate Parquet checkpoints to Google Drive after every phase, with resume-gate logic that skips a phase if its final artifact already exists. A JVM crash during a six-hour run does not force a restart of the SODA pull, only of the failed phase. We additionally write a \texttt{.raw.parquet} pyarrow checkpoint after the SODA pull but before the Spark conversion, because the Spark conversion has historically been the most fragile step.
+This split also gives us a useful crash-safety property. The Colab side writes intermediate Parquet checkpoints to Google Drive after every phase, with resume-gate logic that skips a phase if its final artifact already exists. A JVM crash during a six-hour run does not force a restart of the SODA pull, only of the failed phase. We additionally write per-page parquet checkpoints during the SODA ingest itself: each 50K-row page is persisted to disk under \texttt{<endpoint>.partial/part\_NNNNN.parquet} before the next request, wrapped in an 8-retry budget with exponential backoff up to 60 seconds, so a transient network failure mid-pull only loses the in-flight page rather than the whole multi-million-row ingest. Re-running the cell resumes from the highest already-written part. The Spark conversion has historically been the most fragile step, so a separate pyarrow checkpoint is written after the SODA pull completes but before the Spark conversion begins.
+
+Figure \ref{fig:arch} sketches the resulting two-tier architecture.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.6cm and 0.7cm,
+    box/.style={draw, rounded corners=2pt, thick, minimum height=0.8cm, minimum width=2.6cm, align=center, font=\small},
+    train/.style={box, fill=blue!10},
+    artifact/.style={box, fill=yellow!20},
+    deploy/.style={box, fill=green!10},
+    arrow/.style={-{Latex[length=2mm]}, thick},
+    label/.style={font=\footnotesize\itshape}
+  ]
+    % Top tier: BATCH (Colab Pro)
+    \node[train] (soda) {SODA API \\ {\scriptsize erm2-nwe9 + 76ig-c548}};
+    \node[train, right=of soda] (spark) {PySpark MLlib \\ {\scriptsize TF-IDF + LR} \\ {\scriptsize LinearReg, W2V} \\ {\scriptsize KMeans}};
+    \node[train, right=of spark] (bert) {sentence-transformers \\ {\scriptsize MiniLM L6 v2} \\ {\scriptsize zero training}};
+
+    % Artifacts tier (middle)
+    \node[artifact, below=1.0cm of spark] (npz) {portable \\ artifacts \\ {\scriptsize .npz / .kv / .json}};
+
+    % Bottom tier: DEPLOY (Streamlit)
+    \node[deploy, below=1.0cm of npz] (load) {Streamlit Cloud \\ free tier};
+    \node[deploy, left=of load] (numpy) {pure-Python \\ inference \\ {\scriptsize numpy + gensim}};
+    \node[deploy, right=of load] (dash) {dashboard tabs \\ {\scriptsize charts + maps}};
+
+    % Arrows
+    \draw[arrow] (soda) -- (spark);
+    \draw[arrow] (spark) -- (bert);
+    \draw[arrow] (spark) -- (npz);
+    \draw[arrow] (bert) -- (npz);
+    \draw[arrow] (npz) -- (load);
+    \draw[arrow] (load) -- (numpy);
+    \draw[arrow] (load) -- (dash);
+
+    % Tier labels
+    \node[label, above=0.05cm of soda, anchor=south west] at (soda.north west) {BATCH (Colab Pro + H100/A100)};
+    \node[label, above=0.05cm of load, anchor=south west] at (load.north west) {DEPLOY (Streamlit Cloud, free tier)};
+
+    % Tier groupings as background rectangles
+    \begin{scope}[on background layer]
+      \node[draw, dashed, rounded corners, fit=(soda)(spark)(bert), inner sep=8pt] {};
+      \node[draw, dashed, rounded corners, fit=(numpy)(load)(dash), inner sep=8pt] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Two-tier architecture. Heavy distributed training happens on Colab GPU; the deployed Streamlit dashboard loads slim portable artifacts at startup, so it runs anywhere Python runs.}
+  \label{fig:arch}
+\end{figure}
 
 \subsection{Phase 2: text preprocessing}
 \label{sec:phase2}
@@ -190,12 +244,13 @@ Per-class precision, recall, and F1 are reported in Table \ref{tab:perclass}. Mo
   \end{tabular}
 \end{table}
 
-\begin{figure}
+\begin{figure}[h]
   \centering
   % Placeholder: this figure is generated from notebook outputs and saved
-  % to dashboard/assets/cm.png by the auto-commit cell in Phase 3.
-  \includegraphics[width=0.7\linewidth]{figures/confusion_matrix.pdf}
-  \caption{Confusion matrix on the held-out split. The off-diagonal mass is concentrated in the Noise - Street/Sidewalk row collapsing into Noise - Residential.}
+  % to dashboard/assets/cm.png by the auto-commit cell in Phase 3. The
+  % copy under figures/ is the report-rendered version exported as PDF.
+  \includegraphics[width=0.85\linewidth]{figures/confusion_matrix.pdf}
+  \caption{Confusion matrix on the held-out 20 percent split for the top-20 classifier. Diagonal dominance is clear: most classes sit at well above 0.95 F1 and place essentially all of their mass on the diagonal cell. The single substantive off-diagonal block is the Noise - Street/Sidewalk row leaking into the Noise - Residential column. We read this leakage as a reporting-bias artifact in the spirit of Kontokosta and Hong (2021) rather than a model failure: the descriptor vocabulary for the two noise sub-categories is genuinely indistinguishable, and the call-taker's choice of one official label over the other is not recoverable from the descriptor alone.}
   \label{fig:cm}
 \end{figure}
 
@@ -221,6 +276,13 @@ Table \ref{tab:regressor} reports the regressor MAE compared to the median-per-c
   \end{tabular}
 \end{table}
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/regressor_lift_by_category.pdf}
+  \caption{Per-category MAE lift over the median-per-category baseline, comparing variant v1 (TF-IDF + agency + borough + time-of-day) and variant v2 (v1 plus the predicted canonical category as a one-hot feature). v2 reaches or exceeds the 10 percent target on the high-variance categories where descriptor text genuinely encodes resolution-time signal (Heat/Hot Water, Consumer Complaint, Sewer, General Construction) while staying neutral on SLA-bounded categories such as Bulky Item and Police Matter where city service-level agreements pin resolution times to an essentially constant window. The aggregate lift of 4.1 percent is therefore not a model-quality story; it is the expected result of averaging high-lift and zero-lift categories together.}
+  \label{fig:regressor-lift}
+\end{figure}
+
 \subsection{Word2Vec versus BERT embeddings (Phases 5 and 10)}
 
 Table \ref{tab:embed} reports K-Means silhouette on both embedding spaces across $k$. BERT MiniLM dominates Word2Vec at every $k$ tested; the largest gap is at $k = 30$ where MiniLM reaches 0.6881 against Word2Vec's 0.4553 (a 51 percent relative gain). This is the headline finding of the embedding sidebar: a pretrained model with 14M parameters and zero domain training beats a from-scratch Word2Vec on global cluster quality.
@@ -242,33 +304,85 @@ Table \ref{tab:embed} reports K-Means silhouette on both embedding spaces across
   \end{tabular}
 \end{table}
 
-\begin{figure}
+\begin{figure}[h]
   \centering
-  \includegraphics[width=0.7\linewidth]{figures/silhouette_curve.pdf}
-  \caption{Silhouette by $k$ for both embedding spaces. MiniLM peaks higher and later; Word2Vec saturates around $k = 25$.}
+  \includegraphics[width=0.85\linewidth]{figures/silhouette_w2v_vs_bert.pdf}
+  \caption{Silhouette score as a function of cluster count $k$ for both embedding spaces. The pretrained sentence-transformers MiniLM model lifts cluster cohesion from approximately 0.46 to approximately 0.69 silhouette at matched $k = 30$ with no domain training, an absolute gain of 0.23 and a relative gain of 51 percent. Word2Vec, trained from scratch on the 311 vocabulary, peaks earlier (around $k = 25$) and at a lower silhouette ceiling, reflecting both its lower dimensionality (100 vs 384) and the fact that it learns only token-level co-occurrence rather than sentence-level semantics.}
   \label{fig:silhouette}
 \end{figure}
 
-\subsection{Borough fingerprints (Phase 6)}
+To check that the Word2Vec clusters at the chosen $k = 25$ are operationally meaningful and not just numerical artifacts of the silhouette objective, Table \ref{tab:cluster-terms} lists the top distinctive tokens for the five most cluster-distinctive groupings in the latest run. Each cluster's vocabulary is internally consistent with a single operational theme, and the themes are not the same as the official Problem categories, which is the whole point of the unsupervised view.
 
-Table \ref{tab:fingerprints} lists the top five distinctive tokens per borough by lift. Manhattan's distinctive vocabulary clusters around lost or stolen personal items (\texttt{wallet}, \texttt{bag}, \texttt{clothing}, \texttt{electronics}, \texttt{insurance}), each with lift around four times the corpus baseline; this is consistent with the borough's role as a commercial and tourist hub. Staten Island's distinctive vocabulary is a winter-services cluster (\texttt{plowed}, \texttt{recy}, \texttt{ewaste}, \texttt{snow}, \texttt{route}). The token \texttt{plowed} reaches lift 5.56, the highest single-term lift in the corpus, reflecting the borough's snow-route concerns relative to a corpus mostly aggregated over the four denser, less car-dependent boroughs.
-
-\begin{table}
-  \caption{Top five distinctive tokens per borough, ranked by lift (token frequency in borough divided by corpus frequency). Required minimum count: 100 occurrences in borough. The Manhattan and Staten Island fingerprints are operationally interpretable; the other three boroughs have less distinctive vocabularies overall.}
-  \label{tab:fingerprints}
+\begin{table}[h]
+  \caption{Top distinctive tokens for the five most internally-consistent Word2Vec + KMeans clusters at $k = 25$. Token rankings are by within-cluster TF-IDF lift over the corpus baseline. Each cluster's vocabulary is operationally interpretable as a single complaint theme, and the themes do not always align cleanly with the official Problem categories (the rat-cluster spans Unsanitary Condition and Rodent; the noise-party cluster spans Noise - Residential and Noise - Street/Sidewalk).}
+  \label{tab:cluster-terms}
   \centering
   \begin{tabular}{ll}
     \toprule
-    Borough & Top distinctive tokens (with lift) \\
+    Cluster id (k=25) & Top distinctive tokens (in rank order) \\
     \midrule
-    Manhattan & wallet (4.1x), bag (4.0x), clothing (3.9x), electronics (3.8x), insurance (3.7x) \\
-    Staten Island & plowed (5.6x), recy (5.1x), ewaste (4.7x), snow (4.4x), route (3.9x) \\
-    Bronx & rat (2.1x), debris (1.9x), peeling (1.8x), lead (1.7x), ceiling (1.7x) \\
-    Brooklyn & sidewalk (1.8x), idling (1.7x), construction (1.6x), tree (1.6x), branch (1.5x) \\
-    Queens & airport (3.2x), helicopter (2.4x), aircraft (2.2x), runway (1.9x), noise (1.6x) \\
+    Cluster 11 & loud, music, party, talking, car, truck \\
+    Cluster 13 & social, distancing \\
+    Cluster 14 & sighting, condition, rat, rodent, attracting, copy \\
+    Cluster 19 & appointment, ewaste \\
+    Cluster 24 & tree, branch, fallen, dead, limb, animal \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+Cluster 11 collapses two official noise sub-categories (Residential and Street/Sidewalk) into a single party-and-vehicle-noise theme, which mirrors exactly the confusion-matrix collapse the supervised classifier shows in Figure \ref{fig:cm}. Cluster 13 is unusually tight and consists almost entirely of \texttt{social distancing} reports from the COVID-19 era, which is a temporally-bounded theme that no static taxonomy ever encoded as its own category. Cluster 14 is the rodent cluster, where \texttt{rat}, \texttt{rodent}, \texttt{sighting}, and \texttt{attracting} co-occur with the operational follow-up vocabulary (\texttt{condition}, \texttt{copy}). Cluster 19 captures e-waste pickup appointments, and cluster 24 captures tree-related complaints (downed limbs, dead trees, fallen branches, with the occasional animal-on-tree report). These clusters, taken together, illustrate that even a token-level Word2Vec view picks up coherent operational themes the official taxonomy does not explicitly model.
+
+\subsection{Borough fingerprints (Phase 6)}
+
+Per-borough complaint volume is itself the first slice worth examining. Brooklyn and Queens together account for roughly half of all rows, with the Bronx and Manhattan filling most of the remainder; Staten Island contributes the smallest share by a wide margin. Volume on its own is not the interesting story, however: the more interesting question is which tokens each borough emphasizes more than the city-wide baseline, and we will see that the borough that reports the least, Staten Island, also produces the most distinctive vocabulary signal of the five.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/borough_volume.pdf}
+  \caption{Per-borough 311 complaint volume on the 10M sample. Brooklyn and Queens dominate; Staten Island contributes the smallest share. Despite contributing the least volume, Staten Island carries the strongest distinctive-vocabulary signal in the lift analysis (Table \ref{tab:borough-fingerprints}), suggesting that borough-level "fingerprint" strength is decoupled from raw call volume.}
+  \label{fig:borough-volume}
+\end{figure}
+
+Table \ref{tab:borough-fingerprints} lists the top five distinctive tokens per borough by lift over the city-wide TF-IDF baseline. Manhattan's distinctive vocabulary clusters around lost or stolen personal items and the consumer-protection follow-ups (\texttt{wallet}, \texttt{bag}, \texttt{clothing}, \texttt{electronics}, \texttt{insurance}), each with lift around four times the corpus baseline; this is consistent with the borough's role as a commercial and tourist hub where lost-property and consumer-claim tickets concentrate. Staten Island's distinctive vocabulary is a winter-services and waste-route cluster (\texttt{plowed}, \texttt{law}, \texttt{recy}, \texttt{material}, \texttt{ewaste}). The token \texttt{plowed} reaches lift around 5.6, the highest single-term lift in the corpus, reflecting the borough's snow-route and bulk-waste concerns relative to a corpus mostly aggregated over the four denser, less car-dependent boroughs.
+
+\begin{table}[h]
+  \caption{Top 5 distinctive vocabulary terms per borough by TF-IDF lift over the city-wide corpus. Lift > 1 means the term appears more often in that borough than the city baseline.}
+  \label{tab:borough-fingerprints}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+    Borough & Term & Lift \\
+    \midrule
+    Manhattan & wallet & 4.4x \\
+              & bag & 4.4x \\
+              & clothing & 4.3x \\
+              & electronics & 4.2x \\
+              & insurance & 3.9x \\
+    Staten Island & plowed & 5.6x \\
+                  & law & 5.0x \\
+                  & recy & 3.7x \\
+                  & material & 3.7x \\
+                  & ewaste & 3.7x \\
+    Bronx & pane & 2.9x \\
+          & refrigerator & 2.7x \\
+          & mailbox & 2.6x \\
+          & locking & 2.5x \\
+          & expiring & 2.5x \\
+    Queens & junction & 2.9x \\
+           & piece & 2.2x \\
+           & raised & 3.0x \\
+           & sunken & 3.0x \\
+           & affecting & 2.0x \\
+    Brooklyn & bad & 3.2x \\
+             & general & 3.0x \\
+             & restricted & 2.2x \\
+             & nypd & 2.2x \\
+             & way & 2.2x \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The Bronx fingerprint is built around housing-quality maintenance concerns (\texttt{pane}, \texttt{refrigerator}, \texttt{mailbox}, \texttt{locking}, \texttt{expiring}), pointing to apartment-level habitability tickets. Queens's most distinctive tokens (\texttt{junction}, \texttt{piece}, \texttt{raised}, \texttt{sunken}, \texttt{affecting}) cluster around street-condition and pavement-irregularity vocabulary, plausibly reflecting the borough's lower density and longer per-capita stretch of secondary roads. Brooklyn's fingerprint (\texttt{bad}, \texttt{general}, \texttt{restricted}, \texttt{nypd}, \texttt{way}) is the noisiest of the five and includes more high-frequency generic adjectives, which we read as a sign that Brooklyn's ticket distribution is closest to the overall city corpus and therefore has the least distinctive vocabulary signature.
 
 \subsection{An honest demo finding}
 

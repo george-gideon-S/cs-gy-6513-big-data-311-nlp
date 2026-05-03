@@ -3,6 +3,14 @@
 **Last updated:** 2026-05-03
 **Project:** CSGY-6513 Big Data final project, NYC 311 NLP pipeline.
 **Working directory on Windows:** `G:\MASTER'S\NYU SEMESTER 02\Big Data\FINAL PROJECT\FINAL PROJECT IMPLEMENTATION\`
+**Repo state at time of writing:** main branch tip at commit `24e9c1d` (dashboard
+button visibility, sample-size string fixes 2M to 10M, notebook ref consolidation,
+gitignore re-allowing runtime artifacts so the deployed dashboard ships with data
+in the repo). Earlier relevant commits: `fe3ee6b` (commit_artifacts no-ops on
+gitignored paths), `8effe34` (SODA pull is now crash-safe with per-page parquet
+checkpoints and an 8-retry budget with up to 60s backoff), `8907645` (this guide
+and `docs/REPORT.tex` were rewritten), `b9d74d6` (the repo cleanup that collapsed
+the eight phase notebooks into the single submission notebook).
 
 ---
 
@@ -251,6 +259,52 @@ Symptom: 403 from the SODA API after ~10 requests. Means your token is wrong or
 expired. Get a new one from `https://data.cityofnewyork.us/profile/edit/developer_settings`,
 update the Colab Secret `SODA_APP_TOKEN`, and re-run Phase 1.
 
+### Recovering from a SODA timeout mid-pull
+
+The two SODA endpoints occasionally drop the connection mid-page or return a 504
+when you push past a couple million rows in a single pull. Symptoms include
+`requests.exceptions.ReadTimeout`, `ConnectionResetError`, or a hung cell that
+never finishes its progress bar. This used to mean restarting the entire SODA
+pull from page zero, which on a 10M run was an hour of wasted compute.
+
+After commit `8effe34` the ingest function is crash-safe via per-page parquet
+checkpoints. Each page (50K rows by default) is written immediately to disk under
+`<endpoint>.partial/part_NNNNN.parquet` before the next page is fetched, where
+`NNNNN` is the page index zero-padded to five digits. The function also wraps
+each page request in an 8-retry budget with exponential backoff up to 60
+seconds, so transient blips no longer abort the run.
+
+The user-side recovery procedure is now: **just re-run the Phase 1 cell.** When
+the function starts, it scans `<endpoint>.partial/` for existing
+`part_NNNNN.parquet` files, infers the highest already-written page index, and
+resumes the SODA call from the next offset. Pages that are already on disk are
+skipped entirely. There is nothing to delete and no offset to set manually.
+Concretely the layout looks like:
+
+```
+/content/drive/MyDrive/cs6513/raw/
+  2020plus.partial/
+    part_00000.parquet     # rows 0..49999
+    part_00001.parquet     # rows 50000..99999
+    ...
+    part_00099.parquet     # last good page before timeout
+  2010_2019.partial/
+    part_00000.parquet
+    ...
+```
+
+Once the resumed run reaches the configured `TARGET_ROWS_PER_ENDPOINT`, the
+function concatenates the parts into a single Parquet directory at
+`<endpoint>.parquet/` and the `.partial/` directory is left in place as a
+recovery artifact. You can delete the `.partial/` directory manually after a
+clean Phase 1 finishes, but it does not hurt to leave it; Phase 2 reads only
+from the consolidated `<endpoint>.parquet/` path.
+
+If the resumed run still times out mid-page, the retry budget should kick in
+before you see an exception. If you do see an exception, just re-run the cell
+again. The state on disk is monotonic: every successful re-run only adds parts,
+it never deletes them.
+
 ### Streamlit Cloud build fails
 
 Most common cause is a binary dep that does not have a wheel. We have already
@@ -338,6 +392,37 @@ Internally it:
 If you accidentally delete the Colab secret mid-session, the function will print
 a helpful error pointing you back here.
 
+### What gets committed back, and why it matters for the dashboard
+
+After commit `24e9c1d` the repo `.gitignore` has been relaxed so that the small
+runtime artifacts the dashboard reads at startup are tracked under version
+control. Specifically the JSON metric blobs, the gensim `KeyedVectors` `.kv`
+file, and the numpy `.npz` model exports under `models/portable/` and
+`dashboard/assets/` are committed; the heavy parquet directories, the Spark
+PipelineModels, and any per-row intermediate files remain gitignored. The
+practical consequence is that as soon as the auto-commit cell at the end of the
+notebook lands, the deployed Streamlit dashboard pulls the new artifacts on its
+next rebuild and the live demo starts serving the most recent run's numbers,
+without any manual upload step.
+
+If a path you pass to `commit_artifacts` happens to be gitignored, the function
+no longer aborts the entire commit (this was the change in commit `fe3ee6b`).
+Instead it silently skips the gitignored entry, logs which paths were skipped,
+and proceeds to commit whatever remains. This means you can call the function
+with the same list of paths whether or not your gitignore is in the relaxed or
+strict state; the behavior degrades gracefully.
+
+### A note on the dashboard buttons
+
+The dashboard's primary action buttons used to render with white text on a
+slightly off-white background, which on some screens made the labels nearly
+invisible. Commit `24e9c1d` fixed this by overriding the Streamlit theme so the
+buttons now show **white text on a purple background** matching the rest of the
+dashboard's primary accent color. This is purely a CSS fix; if you fork the
+dashboard and the buttons revert, check `dashboard/app.py` for the `st.markdown`
+block that injects the override styles and confirm it is still wired in before
+the first `st.button` call.
+
 ---
 
 ## Streamlit Cloud deployment
@@ -385,9 +470,13 @@ it will crash on Streamlit Cloud too.
 
 ## Verifying success
 
-After Run All finishes, check these numbers in the cell outputs. They are the
-"healthy" range based on a successful 2M-row run; the 10M run scales accordingly.
-If your numbers are dramatically outside this range, something went wrong.
+After Run All finishes, check these numbers in the cell outputs. The dataset
+is the **10M-row** stratified sample (5M from each SODA endpoint, drawn from a
+roughly 43M-row 13 GB raw corpus). The "healthy" ranges below are pinned to a
+recent successful run; absolute numbers from a fresh 10M run will move slightly
+because of stratification randomness, but the order of magnitude and the
+relative ordering between baselines and models should match. If your numbers
+are dramatically outside this range, something went wrong.
 
 ### Phase 1 (ingest)
 - 2020+ pull: roughly 5,000,000 rows from erm2-nwe9
