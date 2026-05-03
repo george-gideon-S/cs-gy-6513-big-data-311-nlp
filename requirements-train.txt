@@ -1,0 +1,23 @@
+# training-time deps. install on Colab via:
+#     !pip install -r requirements-train.txt -q
+# the deployed Streamlit Cloud app uses requirements.txt only.
+
+# everything from the slim runtime
+-r requirements.txt
+
+# heavy training stack
+pyspark>=3.5,<4
+delta-spark>=3.0,<4
+
+# geospatial training
+geopandas>=0.14
+shapely>=2.0
+pyarrow>=14
+scipy>=1.11
+
+# bert / phase 10
+sentence-transformers>=2.5
+torch>=2.1
+
+# colab-specific extras
+pyngrok>=7.0
