@@ -45,13 +45,18 @@ def commit_artifacts(message: str = 'phase artifacts from colab', paths: list | 
     """
     stage paths, commit if there are changes, push using the PAT.
 
+    push uses url-embedded auth as a one-shot push target rather than
+    setting it as the persistent remote, so the token never lands in
+    .git/config. http.extraHeader doesnt preempt git's basic-auth prompt
+    on some versions, but a fully-qualified url with embedded creds does.
+
     Args:
         message: commit message.
         paths: list of git paths to stage. defaults to dashboard/assets/ and
                models/portable/.
 
     Returns:
-        True if a push occurred, False if nothing to commit or no token.
+        True if a push occurred, False if no token or push failed.
     """
     paths = paths or DEFAULT_PATHS
     token = _get_pat()
@@ -66,22 +71,32 @@ def commit_artifacts(message: str = 'phase artifacts from colab', paths: list | 
     # stage
     subprocess.run(['git', '-C', REPO_ROOT, 'add'] + paths, check=True)
 
-    # commit
+    # commit (skip if nothing changed)
     res = subprocess.run(
         ['git', '-C', REPO_ROOT, 'commit', '-m', message],
         capture_output=True, text=True,
     )
-    if 'nothing to commit' in res.stdout or 'nothing added' in res.stdout:
-        print('nothing new to commit; skipping push.')
-        return False
-    print(res.stdout)
+    fresh_commit = not (
+        'nothing to commit' in res.stdout or 'nothing added' in res.stdout
+    )
+    if fresh_commit:
+        print(res.stdout)
+    else:
+        print('nothing new to commit (will still try to push existing commits)')
 
-    # push - use http.extraHeader so the token doesnt land in .git/config
-    auth_header = f'Authorization: Bearer {token}'
+    # check if there are unpushed commits to push
+    ahead_check = subprocess.run(
+        ['git', '-C', REPO_ROOT, 'log', '@{u}..HEAD', '--oneline'],
+        capture_output=True, text=True,
+    )
+    if not ahead_check.stdout.strip() and not fresh_commit:
+        print('local is in sync with origin; nothing to push.')
+        return False
+
+    # push using url-embedded auth (one-shot target, doesnt persist in config)
+    auth_url = f'https://x-access-token:{token}@github.com/george-gideon-S/cs-gy-6513-big-data-311-nlp.git'
     push_res = subprocess.run(
-        ['git', '-C', REPO_ROOT,
-         '-c', f'http.extraHeader={auth_header}',
-         'push', 'origin', 'main'],
+        ['git', '-C', REPO_ROOT, 'push', auth_url, 'HEAD:main'],
         capture_output=True, text=True,
     )
     if push_res.returncode != 0:
@@ -90,5 +105,8 @@ def commit_artifacts(message: str = 'phase artifacts from colab', paths: list | 
         print(push_res.stderr)
         return False
 
+    # git push prints to stderr on success - relay it but strip the auth url
+    out = (push_res.stdout + push_res.stderr).replace(auth_url, REMOTE_URL)
+    print(out)
     print('pushed to github successfully')
     return True
