@@ -12,6 +12,28 @@ import re
 import numpy as np
 import streamlit as st
 
+# spark-compatible token hash. spark's MLlib HashingTF uses MurmurHash3_x86_32
+# with seed=42 internally, so we replicate that here. python's built-in hash()
+# is randomized per process (PYTHONHASHSEED) so it is NOT compatible with
+# the buckets the trained classifier learned. using mmh3 with the same seed
+# makes deploy-time tokens land in the same buckets training-time tokens did.
+try:
+    import mmh3
+    _HAVE_MMH3 = True
+except ImportError:
+    _HAVE_MMH3 = False
+
+
+def _bucket(token: str, vocab_size: int) -> int:
+    """spark-compatible hash bucket. matches HashingTF(seed=42) at training."""
+    if _HAVE_MMH3:
+        # mmh3.hash returns a signed 32-bit int; python's % handles negatives
+        return mmh3.hash(token, seed=42) % vocab_size
+    # fallback: python's hash() (NOT spark-compatible, model will degrade to
+    # predicting the class prior). we keep this so the dashboard still loads
+    # if mmh3 is missing from the deploy env.
+    return abs(hash(token)) % vocab_size
+
 from dashboard.data_loader import load_classifier_npz, load_regressor_npz, load_json
 from dashboard.charts import (
     confidence_bars, vertical_bar, empty_state,
@@ -63,7 +85,8 @@ def _tokenize(text: str) -> list:
 
 
 def _predict(text: str, artifact: dict):
-    """pure-python LR inference using the npz from src.classify.export_portable."""
+    """pure-python LR inference using the npz from src.classify.export_portable.
+    uses mmh3 (spark-compatible hash) so token buckets match training time."""
     tokens = _tokenize(text)
     if not tokens:
         return None, [], None, []
@@ -71,7 +94,11 @@ def _predict(text: str, artifact: dict):
     vocab_size = int(artifact['vocab_size'])
     raw = np.zeros(vocab_size, dtype=np.float32)
     for tok in tokens:
-        idx = abs(hash(tok)) % vocab_size
+        # spark-compatible hashing - identical buckets to training-time
+        # HashingTF(seed=42). python's built-in hash() was producing random
+        # buckets per-process and degrading the classifier to predicting the
+        # class prior on every input.
+        idx = _bucket(tok, vocab_size)
         raw[idx] += 1.0
     weighted = raw * artifact['idf']
     logits = artifact['coefs'] @ weighted + artifact['intercepts']

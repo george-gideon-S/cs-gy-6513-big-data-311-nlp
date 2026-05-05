@@ -128,15 +128,25 @@ def predict_portable(text_tokens: list, artifact: dict) -> tuple:
         (predicted_label, confidence_dict)
     """
     # hash the tokens into the same feature space the spark model used.
-    # we replicate spark's HashingTF behavior with a simple modulo hash.
+    # spark MLlib's HashingTF uses MurmurHash3_x86_32 with seed=42. python's
+    # built-in hash() is randomized per-process so the buckets dont line up;
+    # a token that landed at bucket 1234 during training would land at some
+    # random bucket at deploy time, making the model effectively predict
+    # the class prior on every input. mmh3 with seed=42 matches spark.
+    try:
+        import mmh3
+        def _bucket(tok: str, n: int) -> int:
+            return mmh3.hash(tok, seed=42) % n
+    except ImportError:
+        # last-resort fallback if mmh3 isnt installed - the model will degrade
+        # to predicting the class prior, but the call wont crash.
+        def _bucket(tok: str, n: int) -> int:
+            return abs(hash(tok)) % n
+
     vocab_size = int(artifact["vocab_size"])
     raw = np.zeros(vocab_size, dtype=np.float32)
     for tok in text_tokens:
-        # spark uses murmurhash3_32 internally. we approximate with python's
-        # built-in hash() then mod. for demo purposes the small drift is fine
-        # but this is the place to swap in real murmurhash if exact parity
-        # matters at evaluation time.
-        idx = hash(tok) % vocab_size
+        idx = _bucket(tok, vocab_size)
         raw[idx] += 1.0
 
     # idf weighting

@@ -21,5 +21,12 @@ streamlit-folium>=0.18
 # pure-python ml inference (no spark needed at serve time)
 scikit-learn>=1.3
 
+# spark-compatible hash. spark MLlib's HashingTF uses MurmurHash3_x86_32
+# with seed=42 internally. at deploy time the classifier needs the same
+# hash function so token buckets match training-time buckets - python's
+# built-in hash() is randomized per-process and degrades the classifier
+# to predicting the class prior on every input.
+mmh3>=4.0
+
 # api fetches for live pulse
 requests>=2.31
