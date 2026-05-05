@@ -1,8 +1,8 @@
 {
   "phase": 3,
-  "trained_at": "2026-05-03T14:51:36.728375Z",
-  "n_train": 5338848,
-  "n_test": 1335535,
+  "trained_at": "2026-05-05T05:41:00.559312Z",
+  "n_train": 5338324,
+  "n_test": 1336059,
   "n_classes": 20,
   "classes": [
     "Noise - Residential",
@@ -29,21 +29,21 @@
   "model": "tf-idf + logistic regression (multinomial)",
   "feature_dim": 16384,
   "metrics": {
-    "f1": 0.932644602019857,
-    "weightedFMeasure": 0.932644602019857,
-    "accuracy": 0.9441235160441321
+    "f1": 0.9326378277092499,
+    "weightedFMeasure": 0.9326378277092499,
+    "accuracy": 0.9440601051300879
   },
   "baselines": {
     "majority_class": {
-      "macro_f1": 0.012381935209598832,
-      "accuracy": 0.1413171500559701
+      "macro_f1": 0.012367507621591273,
+      "accuracy": 0.14112924653776518
     },
     "keyword_heuristic": {
-      "macro_f1": 0.7934295901546069,
-      "accuracy": 0.790535628044192
+      "macro_f1": 0.7934279173269009,
+      "accuracy": 0.7906731663796285
     }
   },
-  "lift_over_majority_f1": 0.9202626668102581,
-  "lift_over_keyword_f1": 0.1392150118652501,
-  "training_time_sec": 110.13014101982117
+  "lift_over_majority_f1": 0.9202703200876586,
+  "lift_over_keyword_f1": 0.13920991038234898,
+  "training_time_sec": 53.280627727508545
 }

@@ -1,6 +1,6 @@
 {
   "phase": 10,
-  "computed_at": "2026-05-03T15:00:35.675016Z",
+  "computed_at": "2026-05-05T05:46:34.410255Z",
   "model": "sentence-transformers/all-MiniLM-L6-v2",
   "n_encoded": 100000,
   "embedding_dim": 384,
@@ -34,7 +34,7 @@
   ],
   "best_k": 30,
   "best_silhouette": 0.6647352576255798,
-  "word2vec_silhouette_at_same_k": 0.4612360055291126,
+  "word2vec_silhouette_at_same_k": 0.4509180948946398,
   "bert_cluster_categories": {
     "0": [
       [
