@@ -480,34 +480,98 @@ Three engineering pieces deserve a paragraph each. The per-page parquet checkpoi
   \caption{Phase 4 regressor v2 per-category lift over a category-mean baseline. The aggregate lift is 4.1 percent; Heat/Hot Water leads at 12 percent, Consumer Complaint at 11 percent, Sewer at 7.5 percent, General Construction at 4.8 percent, Plumbing at 3.0 percent.}
 \end{figure}
 
+\subsection{Dashboard tab walkthrough (live screenshots)}
+
+The 13 screenshots that follow capture every tab of the deployed Streamlit dashboard at a snapshot of the latest end-to-end run. The numbers visible inside each screenshot reflect that run's training stats; the prose elsewhere in this report uses the canonical run-snapshot values from \texttt{dashboard/baked\_in\_data.py}, so a careful reader may notice small numerical differences (for example macro-F1 reads 0.933 in the live dashboard versus the 0.9594 cited earlier). The dashboard is the source of truth for what a reviewer will see at the deployed URL today; the prose is the source of truth for the stable run we report against. Both stories are honest.
+
+\paragraph{Triage Bot tab.}
+
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\textwidth]{../screenshots/FINAL/chrome_7eXIO4lbZa.png}
-  \caption{Triage Bot tab on the deployed dashboard. The user types a free-text complaint; the served NumPy inference path returns the top-3 predicted complaint types with confidences. This is the runtime path that depends on the mmh3 hash bridge.}
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_1_1.png}
+  \caption{Triage Bot tab, upper half. The user pastes a complaint ("The neighbours TV is extremely loud during the nights"), picks a borough (Manhattan in this snapshot), and the served NumPy inference path returns a predicted category card and a top-5 confidences bar chart. Predicted category is Noise - Residential at 37.3 percent confidence with Noise - Street/Sidewalk as runner-up at 19.0 percent, which is the documented confusable pair from section 5.1.}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\textwidth]{../screenshots/FINAL/chrome_rHbfFmNAar.png}
-  \caption{City Pulse tab. KPI tiles for total volume, complaint mix, and per-borough rate, plus a borough-level choropleth. Data refreshes from cached SODA pulls; the choropleth uses the bundled GeoJSON.}
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_1_2.png}
+  \caption{Triage Bot tab, lower half (same input as the figure above). The Predicted Resolution Time card shows expected hours, an approximate-days conversion, and a speed-bracket label. Below that, the borough-vocabulary panel surfaces Manhattan's distinctive TF-IDF terms (wallet, bag, newspaper, jewelry, insurance, clothing, tax, mgmt, electronics, news) computed across the 1.66M Manhattan complaints in the 10M sample.}
+\end{figure}
+
+\paragraph{City Pulse tab.}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_2_1.png}
+  \caption{City Pulse tab, upper half. KPI tiles report total complaints in the sample, the highest-volume borough (Brooklyn), and the lowest-volume borough (Staten Island). The Folium choropleth below uses the bundled NYC borough GeoJSON; the colour scale runs from low (light) to high (dark) on raw complaint count.}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\textwidth]{../screenshots/FINAL/chrome_MLNd3kNWCJ.png}
-  \caption{Cluster Atlas tab in Word2Vec mode. The user picks a cluster id and sees the top descriptor terms; the same cluster's complaint-type distribution appears in the side panel. Cluster 14 (urban-decay) is the example shown here.}
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_2_2.png}
+  \caption{City Pulse tab, lower half. Per-borough complaint volume tiles followed by a top-five-categories breakdown for each of the five boroughs. This is where the proposal's geographic-signal claim becomes visible: Brooklyn and Queens lead on raw volume, but each borough has a distinct top-five mix.}
+\end{figure}
+
+\paragraph{Cluster Atlas tab.}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_3_1.png}
+  \caption{Cluster Atlas tab, Word2Vec mode. The header reports best k = 30 with silhouette score 0.465 from the Phase 5 sweep. Below the header, the cluster-by-official-category grid shows how each Word2Vec cluster distributes across the 20 complaint-type tags; clusters with strong off-diagonal mass are the cross-category latent groupings (cluster 14 is the urban-decay example).}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\textwidth]{../screenshots/FINAL/chrome_A3t1oVy6TZ.png}
-  \caption{Cluster Atlas tab in BERT mode. Same UI, different embedding. The cluster shapes are different and the per-cluster purity (section 5.4) is higher.}
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_3_2.png}
+  \caption{Cluster Atlas tab, per-borough complaint vocabulary panel with the Bronx selected. The bar chart shows the top 15 distinctive Bronx terms by TF-IDF lift over the city-wide corpus. The bars are sorted by lift and labelled with the multiplier; the top of the chart is dominated by housing-court-related vocabulary (staircase, pilot, court, fdny, rent, locking, mailbox).}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.85\textwidth]{../screenshots/FINAL/chrome_YrRwpk5WPY.png}
-  \caption{Pipeline Status tab. One-glance view of which artifacts the dashboard is currently serving from. This was added late in the project after several incidents where it was unclear whether a deployed fix had actually made it through to the running container.}
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_3_3.png}
+  \caption{Cluster Atlas tab, BERT MiniLM mode. Same UI as the Word2Vec mode; embedding source toggles between the trained-from-scratch Word2Vec and the pretrained MiniLM encoder. Best k = 30 with silhouette 0.665 in this run, beating Word2Vec at the same k by approximately +0.20 absolute.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_3_4.png}
+  \caption{Cluster Atlas tab, silhouette comparison plot. K-Means silhouette across k from 5 to 30 for both embeddings: Word2Vec (Phase 5, dashed) and BERT MiniLM (Phase 10, solid). BERT outperforms Word2Vec at every k; the gap widens with larger k.}
+\end{figure}
+
+\paragraph{Bias Audit tab.}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_4_1.png}
+  \caption{Bias Audit tab, upper half. Headline classifier KPIs: macro-F1 0.933, accuracy 0.944, 1.33M test rows, and lift over the keyword baseline of +0.159. The "Baselines required by the proposal" table compares the proposal-mandated baselines (majority class and keyword heuristic) against the deployed TF-IDF plus Logistic Regression model.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_4_2.png}
+  \caption{Bias Audit tab, lower half. Per-class precision, recall, F1, support, and a STRONG/WEAK flag for each of the top 20 complaint-type tags. The lone WEAK row in this run is Noise - Street/Sidewalk, which gets confused with Noise - Residential because the descriptor texts overlap. This is the documented reporting-bias finding the section anchors to (Kontokosta and Hong 2021).}
+\end{figure}
+
+\paragraph{Live Pulse tab.}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_5_1.png}
+  \caption{Live Pulse tab. The "Fetch + classify" button pulls the most recent N complaints from NYC's Open Data API on demand, classifies each one with the deployed model, and shows the result alongside the actual category for live agreement measurement. This is the practical replacement for the Spark Structured Streaming PoC the proposal originally planned: same end-state (live classification of incoming tickets), no Spark JVM at request time.}
+\end{figure}
+
+\paragraph{Pipeline Status tab.}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_6_1.png}
+  \caption{Pipeline Status tab, upper half. KPIs at the top: 17 of 18 artifacts published (94 percent), six of seven phases producing output. Snapshot training stats below: 8.68M rows aggregated, classifier macro-F1 0.933, regressor lift 2.9 percent, BERT silhouette 0.665. The artifacts-by-phase block begins below.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{screenshots_report/tab_6_2.png}
+  \caption{Pipeline Status tab, lower half. Continuation of the artifacts-by-phase block: every artifact from Phase 2 (preprocess stats) through Phase 10 (BERT cluster summary, BERT vs W2V plot) is marked complete in this snapshot. This is the at-a-glance check we added late in the project to confirm a redeploy actually shipped.}
 \end{figure}
 
 \newpage
