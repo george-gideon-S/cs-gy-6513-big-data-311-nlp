@@ -1,23 +1,23 @@
 {
   "phase": 4,
-  "trained_at": "2026-05-05T05:42:39.080188Z",
-  "n_train": 4917345,
-  "n_test": 1229535,
+  "trained_at": "2026-05-07T01:57:45.331215Z",
+  "n_train": 4917225,
+  "n_test": 1229655,
   "model": "v2: tf-idf + agency_oh + borough_oh + cat_oh + temporal + LR on log1p(hours)",
   "metrics_hours_space": {
-    "mae": 112.8829666012327,
-    "rmse": 448.51670256471596,
-    "r2": 0.09191935330513756
+    "mae": 113.44909796051188,
+    "rmse": 449.935354399211,
+    "r2": 0.09200855657639895
   },
   "baseline_median_per_category": {
-    "mae": 116.21887592712328
+    "mae": 116.82629947808304
   },
-  "improvement_pct": 2.8703679150901555,
+  "improvement_pct": 2.890788745906258,
   "v1_metrics_hours_space": {
-    "mae": 113.00699382001913,
-    "rmse": 449.07502302657883,
-    "r2": 0.08965716077648722
+    "mae": 113.57496477373739,
+    "rmse": 450.50598242716626,
+    "r2": 0.08970398585747597
   },
-  "v1_improvement_pct": 2.7636492622060826,
-  "training_time_sec": 33.7925283908844
+  "v1_improvement_pct": 2.7830503224623766,
+  "training_time_sec": 0.0
 }

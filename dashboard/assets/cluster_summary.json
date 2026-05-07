@@ -1,6 +1,6 @@
 {
   "phase": 5,
-  "trained_at": "2026-05-05T05:46:09.382391Z",
+  "trained_at": "2026-05-07T01:58:30.560565Z",
   "n_docs": 6679021,
   "vocab_size": 1351,
   "word2vec": {
@@ -1652,7 +1652,7 @@
     ]
   },
   "training_time_sec": {
-    "word2vec": 110.4748215675354
+    "word2vec": 0.0
   },
   "urban_decay_cluster": 2
 }

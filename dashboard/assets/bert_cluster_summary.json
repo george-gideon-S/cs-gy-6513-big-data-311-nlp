@@ -1,6 +1,6 @@
 {
   "phase": 10,
-  "computed_at": "2026-05-05T05:46:34.410255Z",
+  "computed_at": "2026-05-07T01:59:07.862330Z",
   "model": "sentence-transformers/all-MiniLM-L6-v2",
   "n_encoded": 100000,
   "embedding_dim": 384,
